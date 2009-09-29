@@ -1,0 +1,23 @@
+{% extends base.html %}
+
+{% block mainbody %}
+    
+    Reserve a guest using the below form:
+    <form action="/checkout" method="post">
+        Select Host:
+        <select>
+            <option value="pc">philcollins.rdu.redhat.com</option>
+        </select>
+        <br />
+        Guest Name:
+        <input type="text" name="guestname">
+        <br />
+        Guest Profile:
+        <select>
+            <option value="1">myvirtprofile</option>
+        </select>
+        <br />
+        <input type="submit" value="Reserve!">
+    </form>
+    
+{% end %}

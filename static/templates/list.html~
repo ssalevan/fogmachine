@@ -1,0 +1,37 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Your hosts and guests, as seen by Cobbler:
+    <div class="alignLeft">
+    {% if hosts %}
+    
+        <ul>
+        {% for host in hosts %}
+            <li>{{ host.cobbler_name }}</li>
+            {% if len(guests[host]) > 0 %}
+            
+                <ul>
+                {% for guest in guests[host] %}
+                    <li>Cobbler Name: {{ guest.cobbler_name }}</li>
+                    <li>Virt Name: {{ guest.virt_name }}</li>
+                    <li>Expires at: {{ guest.expire_date }}</li>
+                {% end %}
+                </ul>
+                
+            {% else %}
+            
+                <ul> <li> No guests present. </li> </ul>
+            
+            {% end %}
+            
+        {% end %}
+        </ul>
+
+    {% else %}
+
+        <p> Zoinks!  No hosts are registered. </p>
+
+    {% end %}
+    </div>
+{% end %}

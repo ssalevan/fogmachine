@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <title> {{ title }} </title>
+        <link rel="stylesheet" type="text/css" href="static/css/fogmachine.css" />
+    </head>
+    <body>
+        <div id="titlebar">
+            <a href="/">
+                <img border="0" width="507" height="188" alt="Home" src="static/images/fogmachine.jpg"/>
+            </a>
+            <div id="headertext">
+                {{ title }}
+            </div>
+        </div>
+        <div id="navbar">
+            <a href="/"> Home </a>
+            | <a href="/list"> List Hosts/Guests </a>
+            | <a href="/checkout"> Checkout Guests </a>
+        </div>
+        <div id="sitemain">
+        {% block mainbody %}
+            Welcome to Fogmachine!  Choose one of the above functions to do stuff.
+        {% end %}
+        </div>
+    </body>
+</html>
