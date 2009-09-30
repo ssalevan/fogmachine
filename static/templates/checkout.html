@@ -5,9 +5,15 @@
     Reserve a guest using the below form:
     <form action="/checkout" method="post">
         Guest Profile:
-        <select>
-            <option value="1">myvirtprofile</option>
-        </select>
+        {% if profiles %}
+            <select name="profile">
+            {% for profile in profiles %}
+                <option value="{{ profile }}">{{ profile }}</option>
+            {% end %}
+            </select>
+        {% else %}
+            <b> No profiles present! </b>
+        {% end %}
         <br />
         How many?
         <input type="text" name="amount">

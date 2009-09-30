@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import os
+import pdb
 import traceback
 import xmlrpclib
 import tornado.httpserver
@@ -11,18 +12,46 @@ from fogmachine.config_reader import add_hosts
 from tornado.web import RequestHandler
 
 #variables that you might want to change (location of cobbler host, vhost config file)
-COBBLER_HOST = "sat-blade-8.idm.lab.bos.redhat.com"
+COBBLER_HOST = "http://sat-blade-8.idm.lab.bos.redhat.com/cobbler_api"
+COBBLER_USER = "cobbler"
+COBBLER_PASS = "dog8code"
 CONFIG_LOC = "./virthosts.conf"
 LISTEN_PORT = 8888
 
+def getCobbler():
+    cobbler = xmlrpclib.Server(COBBLER_HOST)
+    cobbler.login(COBBLER_USER, COBBLER_PASS)
+    return cobbler
+
 class BaseHandler(RequestHandler):
+    def validate_passwords(self):
+        if not (self.is_argument_present("password") and self.is_argument_present("confirm_password")):
+            return False
+        if not (self.get_argument("password") == self.get_argument("confirm_password")):
+            return False
+        return True
     def get_current_user(self):
         return self.get_secure_cookie("username")
-    def render(self, template_name, errmsg="", **kwargs):
+    def is_argument_present(self, name):
+        return not (self.request.arguments.get(name, None) == None)
+    def render(self, template_name, **kwargs):
+        error = str(self.get_secure_cookie("errmsg"))
+        status = str(self.get_secure_cookie("statmsg"))
+        self.clear_errmsg()
+        self.clear_statmsg()
         RequestHandler.render(self,
             template_name,
-            errmsg=errmsg,
+            errmsg=error,
+            statmsg=status,
             **kwargs)
+    def clear_errmsg(self):
+        self.clear_cookie("errmsg")
+    def send_errmsg(self, errmsg):
+        self.set_secure_cookie("errmsg", errmsg)
+    def clear_statmsg(self):
+        self.clear_cookie("statmsg")
+    def send_statmsg(self, statmsg):
+        self.set_secure_cookie("statmsg", statmsg)
             
 class MainHandler(BaseHandler):
     def get(self):
@@ -47,9 +76,13 @@ class CheckoutHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
         hosts = Host.query.order_by('cobbler_name').all()
+        cobbler = getCobbler()
+        profiles = cobbler.get_profiles()
+        prof_names = [profile['name'] for profile in profiles]
         context = {
             'title': "Checkout Guests",
-            'hosts': hosts
+            'hosts': hosts,
+            'profiles': prof_names
         }
         self.render("static/templates/checkout.html",
             **context)
@@ -63,21 +96,57 @@ class RegisterHandler(BaseHandler):
             title="User Registration")
     def post(self):
         try:
-            if not (self.get_argument("password") == self.get_argument("confirm_password")):
-                self.render("static/templates/register.html",
-                    title="User Registration",
-                    errmsg="Passwords do not match.")
+            if not (self.validate_passwords()):
+                self.send_errmsg("Passwords empty/do not match.")
+                self.redirect("/register")
                 return
             newuser = User(username=self.get_argument("username"),
                 password=self.get_argument("password"),
                 email=self.get_argument("email"))
             session.commit()
             self.set_secure_cookie("username", newuser.username)
+            self.send_statmsg("Successfully created account '%s'." % newuser.username)
             self.redirect("/")
         except:
-            self.render("static/templates/register.html",
-                title="User Registration",
-                errmsg="Registration failed:\n%s" % traceback.format_exc())
+            self.send_errmsg("Registration failed:\n%s" % traceback.format_exc())
+            self.redirect("/register")
+                
+class ProfileHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        user = User.get_by(username=self.current_user)
+        context = {
+            'title': 'Your Profile',
+            'username': user.username,
+            'email': user.email
+        }
+        self.render("static/templates/profile.html",
+            **context)
+    def post(self):
+        try:
+            if not (self.validate_passwords()):
+                self.send_errmsg("Passwords empty/do not match.")
+                self.redirect("/profile")
+                return
+            user = User.get_by(username=self.current_user)
+            user.password = self.get_argument("password")
+            user.email = self.get_argument("email")
+            session.commit()
+            self.send_statmsg("Successfully edited profile.")
+            self.redirect("/profile")
+        except:
+            self.send_errmsg("Profile change failed:\n%s" % traceback.format_exc())
+            self.redirect("/profile")
+                
+class ReservationsHandler(BaseHandler):
+    def get(self):
+        user = User.get_by(username=self.current_user)
+        context = {
+            'title': "Your Reservations",
+            'guests': user.guests
+        }
+        self.render("static/templates/reservations.html",
+            **context)
 
 class LoginHandler(BaseHandler):
     def get(self):
@@ -88,19 +157,18 @@ class LoginHandler(BaseHandler):
             user = User.get_by(username=self.get_argument("username"))
             if user.password == self.get_argument("password"):
                 self.set_secure_cookie("username", user.username)
+                self.send_statmsg("Successfully logged in.")
                 self.redirect("/")
             else:
-                self.render("static/templates/login.html",
-                    title="Login",
-                    errmsg="Username or password incorrect.")
+                self.send_errmsg("Username or password incorrect")
+                self.redirect("/login")
         except:
-            self.render("static/templates/login.html",
-                title="Login",
-                errmsg="Username or password incorrect.")
+            self.send_errmsg("Username or password incorrect")
+            self.redirect("/login")
 
 class LogoutHandler(BaseHandler):
     def get(self):
-        self.set_secure_cookie("username", "")
+        self.clear_cookie("username")
         self.redirect("/")
 
 settings = {
@@ -113,8 +181,10 @@ application = tornado.web.Application([
     (r"/list", ListHandler),
     (r"/checkout", CheckoutHandler),
     (r"/register", RegisterHandler),
+    (r"/reservations", ReservationsHandler),
     (r"/login", LoginHandler),
-    (r"/logout", LogoutHandler)],
+    (r"/logout", LogoutHandler),
+    (r"/profile", ProfileHandler)],
     **settings)
     
 if __name__ == "__main__":

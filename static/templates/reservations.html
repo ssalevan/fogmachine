@@ -1,0 +1,21 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Your current guest reservations:
+    <div class="alignLeft">
+    {% if guests %}
+        {% for guest in guests %}
+            <ul>
+                <li>Cobbler Name: {{ guest.cobbler_name }}</li>
+                <li>Virt Name: {{ guest.virt_name }}</li>
+                <li>Expires at: {{ guest.expire_date }}</li>
+                <li>Purpose: {{ guest.purpose }}</li>
+            </ul>
+        {% end %}
+    {% else %}
+       <p><b> No current reservations. </p></b>
+    {% end %}
+    </div>
+    
+{% end %}

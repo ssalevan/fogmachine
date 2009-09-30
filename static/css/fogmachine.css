@@ -60,6 +60,15 @@ a.login:visited { color: #535151; }
     background-color: #f17676;
     color: #000000;
 }
+#statusbar {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 1028px;
+    height: 24px;
+    background-color: #89ffad;
+    color: #000000;
+}
 #sitemain {
     margin-left: auto;
     margin-right: auto;

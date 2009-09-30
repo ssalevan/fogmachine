@@ -1,0 +1,23 @@
+{% extends base.html %}
+
+{% block mainbody %}
+    
+    Change any settings related to your profile here:
+    
+    <form action="/profile" method="post">
+        Username: <b> {{ username }} </b>
+        <input type="hidden" name="username" value="{{ username }}">
+        <br />
+        Password:
+        <input type="password" name="password">
+        <br />
+        Confirm Password:
+        <input type="password" name="confirm_password">
+        <br />
+        E-mail Address:
+        <input type="text" name="email" value="{{ email }}">
+        <br />
+        <input type="submit" value="Modify profile">
+    </form>
+    
+{% end %}

@@ -27,13 +27,23 @@
             | <a href="/list"> List Hosts/Guests </a>
             | <a href="/checkout"> Checkout Guests </a>
         </div>
-        {% if len(errmsg) > 0 %}
+        
+        {% if not (errmsg == "None") %}
             {% for line in errmsg.split('\n') %}
             <div id="errorbar">
                 {{ line }}
             </div>
             {% end %}
         {% end %}
+        
+        {% if not (statmsg == "None") %}
+            {% for line in statmsg.split('\n') %}
+            <div id="statusbar">
+                {{ line }}
+            </div>
+            {% end %}
+        {% end %}
+        
         <div id="sitemain">
         {% block mainbody %}
             Welcome to Fogmachine!  Choose one of the above functions to do stuff.
