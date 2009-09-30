@@ -4,18 +4,19 @@
     
     Reserve a guest using the below form:
     <form action="/checkout" method="post">
-        Select Host:
-        <select>
-            <option value="pc">philcollins.rdu.redhat.com</option>
-        </select>
-        <br />
-        Guest Name:
-        <input type="text" name="guestname">
-        <br />
         Guest Profile:
         <select>
             <option value="1">myvirtprofile</option>
         </select>
+        <br />
+        How many?
+        <input type="text" name="amount">
+        <br />
+        Reason for reservation:
+        <input type="text" name="purpose">
+        <br />
+        Length of reservation (in days):
+        <input type="text" name="res_length">
         <br />
         <input type="submit" value="Reserve!">
     </form>

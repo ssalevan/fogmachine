@@ -1,3 +1,6 @@
+.alignLeft{text-align: left;}
+.alignRight{text-align: right;}
+.alignCenter{text-align: right;}
 body,td,th {
 	color: #000000;
 }
@@ -5,27 +8,39 @@ body {
 	background-color: #666666;
 	font-family: Arial, Helvetica, sans-serif;
 }
-a {
+a:link { 
     color: #000000;
+    font-weight:bold;
+    text-decoration: none;
 }
-a:visited {
-    color: #535151;
+a:visited { color: #535151; }
+a:hover {
+    text-decoration: underline;
 }
-.alignLeft{text-align: left;}
+a.login:link { color: #ffffff; }
+a.login:visited { color: #535151; }
 #titlebar {
     position:relative;
     margin-left: auto;
     margin-right: auto;
     width:1028px;
     height:194px;
+    color: #ffffff;
     background-color:#000000;
 }
 #headertext {
-    color: #ffffff;
-    font-size: 48px;
     position:absolute;
     bottom:0;
     right:0;
+    font-size: 48px;
+}
+#logintext {
+    position:absolute;
+    top:0;
+    right:0;
+    color: #ffffff;
+    a.color: #ffffff;
+    font-size: 14px;
 }
 #navbar {
     margin-left: auto;
@@ -34,6 +49,15 @@ a:visited {
     width:1028px;
     height:24px;
     background-color:#a2a09f;
+    color: #000000;
+}
+#errorbar {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 1028px;
+    height: 24px;
+    background-color: #f17676;
     color: #000000;
 }
 #sitemain {

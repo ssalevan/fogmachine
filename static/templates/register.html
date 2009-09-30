@@ -1,0 +1,23 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Another visitor?  Come...  stay awhile.  Staaaayyy foorreeevaaaahhhhhhhhhh!!!!
+    
+    <form action="/register" method="post">
+        Username:
+        <input type="text" name="username">
+        <br />
+        Password:
+        <input type="password" name="password">
+        <br />
+        Confirm Password:
+        <input type="password" name="confirm_password">
+        <br />
+        E-mail Address:
+        <input type="text" name="email">
+        <br />
+        <input type="submit" value="Register yo'self">
+    </form>
+    
+{% end %}

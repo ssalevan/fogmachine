@@ -11,12 +11,29 @@
             <div id="headertext">
                 {{ title }}
             </div>
+            <div id="logintext">
+                {% if current_user %}
+                    Welcome, <a class="login" href="/profile"> {{ current_user }}</a>!
+                    | <a class="login" href="/reservations"> Your Reservations </a>
+                    | <a class="login" href="/logout"> Logout </a>
+                {% else %}
+                    <a class="login" href="/login"> Login </a>
+                    | <a class="login" href="/register"> Register </a>
+                {% end %}
+            </div>
         </div>
         <div id="navbar">
             <a href="/"> Home </a>
             | <a href="/list"> List Hosts/Guests </a>
             | <a href="/checkout"> Checkout Guests </a>
         </div>
+        {% if len(errmsg) > 0 %}
+            {% for line in errmsg.split('\n') %}
+            <div id="errorbar">
+                {{ line }}
+            </div>
+            {% end %}
+        {% end %}
         <div id="sitemain">
         {% block mainbody %}
             Welcome to Fogmachine!  Choose one of the above functions to do stuff.

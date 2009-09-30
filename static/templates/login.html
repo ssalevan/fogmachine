@@ -1,0 +1,16 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Need to login?  Well, you've come to the right place.  Enter in them thar credentials:
+    <form action="/login" method="post">
+        Username:
+        <input type="text" name="username">
+        <br />
+        Password:
+        <input type="password" name="password">
+        <br />
+        <input type="submit" value="Login!">
+    </form>
+    
+{% end %}
