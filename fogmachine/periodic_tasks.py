@@ -32,16 +32,19 @@ def update_guest_states():
     for guest in Guest.query.all():
         update_guest_state(guest)
 
+def retire_expired_guests():
+    for guest in Guest.query.all():
+        if guest.expire_date > datetime.now():
+            remove_guest(guest)
+
 def update_guest_state(guest):
     virt = getVirt(guest.host)
     guest.status = virt.get_status(guest.virt_name)
     session.commit()
 
-def retire_expired_guests():
-    for guest in Guest.query.all():
-        if guest.expire_date > datetime.now():
-            virt = getVirt(guest.host)
-            virt.shutdown(guest.virt_name)
-            virt.undefine(guest.virt_name)
-            session.delete(guest)
+def remove_guest(guest):
+    virt = getVirt(guest.host)
+    virt.shutdown(guest.virt_name)
+    virt.undefine(guest.virt_name)
+    session.delete(guest)
     session.commit()

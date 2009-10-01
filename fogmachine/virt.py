@@ -179,37 +179,36 @@ class Virt(object):
         return results
 
     def virttype(self):
-	return self.__get_conn().get_type()
+        return self.__get_conn().get_type()
 
     def autostart(self, vm):
-	    self.conn = self.__get_conn()
-	    self.ssh = self.__get_ssh()
-	    if self.conn.get_type() == "Xen":
-	        autostart_args = [
-		    "/bin/ln",
-		    "-s",
-		    "/etc/xen/%s" % vm,
-		    "/etc/xen/auto"
-	        ]
+        self.conn = self.__get_conn()
+        if self.conn.get_type() == "Xen":
+            autostart_args = [
+    	    "/bin/ln",
+    	    "-s",
+    	    "/etc/xen/%s" % vm,
+    	    "/etc/xen/auto"
+            ]
         else:
             # When using KVM, we need to make sure the autostart
             # directory exists
-	        mkdir_args = [
-		        "/bin/mkdir",
-	            "-p",
-		        "/etc/libvirt/qemu/autostart"
-	        ]
+            mkdir_args = [
+    	        "/bin/mkdir",
+                "-p",
+    	        "/etc/libvirt/qemu/autostart"
+            ]
             self.__send_ssh(mkdir_args,shell=False,close_fds=True)
-
+    
             # We aren't using virsh autostart because we want
             # the command to work even when the VM isn't running
-	        autostart_args = [
-		        "/bin/ln",
-		        "-s",
-		        "/etc/libvirt/qemu/%s.xml" % vm,
-		        "/etc/libvirt/qemu/autostart/%s.xml" % vm
-	        ]
-
+            autostart_args = [
+    	        "/bin/ln",
+    	        "-s",
+    	        "/etc/libvirt/qemu/%s.xml" % vm,
+    	        "/etc/libvirt/qemu/autostart/%s.xml" % vm
+            ]
+    
         return self.__send_ssh(autostart_args,shell=False,close_fds=True)
 
     def freemem(self):
@@ -241,7 +240,6 @@ class Virt(object):
         # install("bootserver.example.org", "client.example.org", True, "client-disk0", "HostVolGroup00")
 
         conn = self.__get_conn()
-        ssh = self.__get_ssh()
 
         if conn is None:
             raise Exception("no connection")
