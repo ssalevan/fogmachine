@@ -11,7 +11,8 @@ def _read_config(file_loc):
         # check if line matches comma-separated entry pattern
         if(re.match(".*,.*",line)):
             entry = line.split(',')
-            entries.append((entry[0].strip(), entry[1].strip()))
+            entries.append((unicode(entry[0].strip()),
+                unicode(entry[1].strip())))
     cfg_file.close()
     return entries
     
@@ -19,11 +20,11 @@ def add_hosts(file_loc):
     all_hosts = _read_config(file_loc)
     # clean out hosts no longer present
     for host in Host.query.all():
-        if not (host.cobbler_name, host.connection) in all_hosts:
+        if not (host.hostname, host.connection) in all_hosts:
             session.delete(host)
     # add new hosts (if any)
     for host in _read_config(file_loc):
-        if not Host.get_by(cobbler_name=host[0]):
-            newhost = Host(cobbler_name=host[0],
+        if not Host.get_by(hostname=host[0]):
+            newhost = Host(hostname=host[0],
                 connection=host[1])
     session.commit()

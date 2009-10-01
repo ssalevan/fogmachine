@@ -2,24 +2,26 @@
 import os
 import pdb
 import traceback
-import xmlrpclib
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
 from fogmachine.model import *
+from fogmachine.periodic_tasks import *
+from fogmachine.virt import *
 from fogmachine.config_reader import add_hosts
 from tornado.web import RequestHandler
 
 #variables that you might want to change (location of cobbler host, vhost config file)
-COBBLER_HOST = "http://sat-blade-8.idm.lab.bos.redhat.com/cobbler_api"
+COBBLER_HOST = "sat-blade-8.idm.lab.bos.redhat.com"
+COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
 COBBLER_USER = "cobbler"
 COBBLER_PASS = "dog8code"
 CONFIG_LOC = "./virthosts.conf"
 LISTEN_PORT = 8888
 
 def getCobbler():
-    cobbler = xmlrpclib.Server(COBBLER_HOST)
+    cobbler = xmlrpclib.Server(COBBLER_API)
     cobbler.login(COBBLER_USER, COBBLER_PASS)
     return cobbler
 
@@ -32,6 +34,8 @@ class BaseHandler(RequestHandler):
         return True
     def get_current_user(self):
         return self.get_secure_cookie("username")
+    def get_user_object(self):
+        return User.get_by(username=self.get_current_user())
     def is_argument_present(self, name):
         return not (self.request.arguments.get(name, None) == None)
     def render(self, template_name, **kwargs):
@@ -60,7 +64,9 @@ class MainHandler(BaseHandler):
 
 class ListHandler(BaseHandler):
     def get(self):
-        hosts = Host.query.order_by('cobbler_name').all()
+        #TODO: put these in periodic handler
+        update_free_mem()
+        hosts = Host.query.order_by('hostname').all()
         guests = {}
         for s_host in hosts:
             guests[s_host] = s_host.guests
@@ -75,7 +81,7 @@ class ListHandler(BaseHandler):
 class CheckoutHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        hosts = Host.query.order_by('cobbler_name').all()
+        hosts = Host.query.order_by('hostname').all()
         cobbler = getCobbler()
         profiles = cobbler.get_profiles()
         prof_names = [profile['name'] for profile in profiles]
@@ -86,6 +92,21 @@ class CheckoutHandler(BaseHandler):
         }
         self.render("static/templates/checkout.html",
             **context)
+            
+    def post(self):
+        try:
+            guest = create_guest(Host.query.all()[0],
+                self.get_argument("profile"),
+                self.get_argument("virt_name"),
+                self.get_argument("expire_days"),
+                self.get_argument("purpose"),
+                self.get_user_object(),
+                COBBLER_HOST)
+            self.send_statmsg("Successfully checked out guest '%s' on %s." % (guest.virt_name, guest.host.hostname))
+            self.redirect("/reservations")
+        except:
+            self.send_errmsg("Checkout failed:\n%s" % traceback.format_exc())
+            self.redirect("/checkout")
 
 class RegisterHandler(BaseHandler):
     def get(self):
@@ -98,6 +119,10 @@ class RegisterHandler(BaseHandler):
         try:
             if not (self.validate_passwords()):
                 self.send_errmsg("Passwords empty/do not match.")
+                self.redirect("/register")
+                return
+            if (User.get_by(username=self.get_argument("username"))):
+                self.send_errmsg("User '%s' exists." % self.get_argument("username"))
                 self.redirect("/register")
                 return
             newuser = User(username=self.get_argument("username"),
@@ -169,6 +194,7 @@ class LoginHandler(BaseHandler):
 class LogoutHandler(BaseHandler):
     def get(self):
         self.clear_cookie("username")
+        self.send_statmsg("Successfully logged out.")
         self.redirect("/")
 
 settings = {

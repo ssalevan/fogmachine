@@ -8,14 +8,17 @@
     
         <ul>
         {% for host in hosts %}
-            <li>{{ host.cobbler_name }} ({{ len(guests[host]) }} guests)</li>
+            <li>{{ host.hostname }} ({{ len(guests[host]) }} guests, {{ host.free_mem }} MB RAM available)</li>
             {% if len(guests[host]) > 0 %}
                 <ul>
                 {% for guest in guests[host] %}
-                    <li>Cobbler Name: {{ guest.cobbler_name }}</li>
                     <li>Virt Name: {{ guest.virt_name }}</li>
-                    <li>Expires at: {{ guest.expire_date }}</li>
-                    <li>Purpose: {{ guest.purpose }}</li>
+                    <ul>
+                        <li>Cobbler Profile: {{ guest.cobbler_profile }}</li>
+                        <li>Expires at: {{ guest.expire_date }}</li>
+                        <li>Current State: {{ guest.state }}</li>
+                        <li>Purpose: {{ guest.purpose }}</li>
+                    </ul>
                 {% end %}
                 </ul>
             {% end %}
