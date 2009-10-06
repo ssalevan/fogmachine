@@ -140,7 +140,7 @@ class CheckoutHandler(BaseHandler):
             host = find_suitable_host(selected_profile)
             if host is None:
                 self.send_errmsg("Host resources inadequate for selected profile.  Try again!")
-                self.redirect("/checkout")
+                self.redirect("/guest/checkout")
             guest = create_guest(host,
                 self.get_argument("profile"),
                 self.get_argument("virt_name"),
@@ -149,10 +149,10 @@ class CheckoutHandler(BaseHandler):
                 self.get_user_object(),
                 COBBLER_HOST)
             self.send_statmsg("Successfully checked out guest '%s' on %s." % (guest.virt_name, guest.host.hostname))
-            self.redirect("/reservations")
+            self.redirect("/guest/reservations")
         except:
             self.send_errmsg("Checkout failed:\n%s" % traceback.format_exc())
-            self.redirect("/checkout")
+            self.redirect("/guest/checkout")
 
 class RegisterHandler(BaseHandler):
     def get(self):
@@ -165,11 +165,11 @@ class RegisterHandler(BaseHandler):
         try:
             if not (self.validate_passwords()):
                 self.send_errmsg("Passwords empty/do not match.")
-                self.redirect("/register")
+                self.redirect("/user/register")
                 return
             if (User.get_by(username=self.get_argument("username"))):
                 self.send_errmsg("User '%s' exists." % self.get_argument("username"))
-                self.redirect("/register")
+                self.redirect("/user/register")
                 return
             newuser = User(username=self.get_argument("username"),
                 password=self.get_argument("password"),
@@ -180,7 +180,7 @@ class RegisterHandler(BaseHandler):
             self.redirect("/")
         except:
             self.send_errmsg("Registration failed:\n%s" % traceback.format_exc())
-            self.redirect("/register")
+            self.redirect("/user/register")
                 
 class ProfileHandler(BaseHandler):
     @tornado.web.authenticated
@@ -197,17 +197,17 @@ class ProfileHandler(BaseHandler):
         try:
             if not (self.validate_passwords()):
                 self.send_errmsg("Passwords empty/do not match.")
-                self.redirect("/profile")
+                self.redirect("/user/profile")
                 return
             user = User.get_by(username=self.current_user)
             user.password = self.get_argument("password")
             user.email = self.get_argument("email")
             session.commit()
             self.send_statmsg("Successfully edited profile.")
-            self.redirect("/profile")
+            self.redirect("/user/profile")
         except:
             self.send_errmsg("Profile change failed:\n%s" % traceback.format_exc())
-            self.redirect("/profile")
+            self.redirect("/user/profile")
                 
 class ReservationsHandler(BaseHandler):
     @tornado.web.authenticated
@@ -237,10 +237,10 @@ class LoginHandler(BaseHandler):
                 self.redirect("/")
             else:
                 self.send_errmsg("Username or password incorrect")
-                self.redirect("/login")
+                self.redirect("/user/login")
         except:
             self.send_errmsg("Username or password incorrect")
-            self.redirect("/login")
+            self.redirect("/user/login")
 
 class LogoutHandler(BaseHandler):
     def get(self):

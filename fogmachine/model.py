@@ -8,6 +8,7 @@ metadata.bind.autocommit = True
 class Host(Entity):
     hostname = Field(Unicode(255), required=True)
     connection = Field(Unicode(255), required=True)
+    virt_type = Field(Unicode(255), required=True)
     free_mem = Field(Integer)
     num_guests = Field(Integer)
     guests = OneToMany('Guest')

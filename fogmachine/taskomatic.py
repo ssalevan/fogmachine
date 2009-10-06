@@ -103,5 +103,5 @@ class Taskomatic(object):
 def start_taskomatic():
     taskomatic = Taskomatic(
         Task(retire_expired_guests, min=0),
-        Task(update_free_mem, min=range(0,60,5))) 
+        Task(update_free_mem, min=range(0,60,1))) 
     taskomatic.start()

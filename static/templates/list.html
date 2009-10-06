@@ -8,7 +8,7 @@
     
         <ul>
         {% for host in hosts %}
-            <li>{{ host.hostname }} ({{ len(guests[host]) }} managed guests, 
+            <li>{{ host.hostname }} ({{ host.virt_type }}, {{ len(guests[host]) }} managed guests, 
                 {{host.num_guests }} total guests, {{ host.free_mem }} MB RAM available)</li>
             {% if len(guests[host]) > 0 %}
                 <ul>
