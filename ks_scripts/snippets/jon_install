@@ -1,0 +1,54 @@
+# quick 'n dirty JON install script
+
+# get jon and pop it into a new jon user directory
+wget http://jon01.qa.atl2.redhat.com:8042/dist/qa/jon-server-2.3.0-8299.zip -O /root/jon.zip
+useradd jon -p $6$XugnrnBjnNdMLzNu$6Aj67pB62YBlNCLw/tR9kwmxPHf0/RZu0qPijl77.r7iZhj2p6b1BPleUS.xXJAxCu3rsN3liSXUfcPzAy9dZ1
+chown jon /root/jon.zip
+mv /root/jon.zip /home/jon
+
+# start postgres
+service postgresql initdb
+service postgresql start
+
+# rig postgres
+su - postgres -c "psql -c \"CREATE USER rhqadmin WITH PASSWORD 'rhqadmin';\""
+su - postgres -c "psql -c \"CREATE DATABASE rhq;\""
+su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE rhq to rhqadmin;\""
+
+echo '
+ # TYPE  DATABASE    USER        CIDR-ADDRESS          METHOD
+
+ # "local" is for Unix domain socket connections only
+ local   all         all                               trust
+ # IPv4 local connections:
+ host    all         all         127.0.0.1/32          trust
+ host    all         all         10.0.0.1/8          md5
+ # IPv6 local connections:
+ host    all         all         ::1/128               trust
+' > /var/lib/pgsql/data/pg_hba.conf
+
+chkconfig postgresql on
+service postgresql restart
+
+# unzip jon
+su - jon -c 'unzip jon.zip'
+su - jon -c 'rm jon.zip'
+su - jon -c 'mv jon* jon'
+
+cp /home/jon/jon/bin/rhq-server.sh /etc/init.d
+
+# prepend chkconfig preamble
+echo '#!/bin/sh
+#chkconfig: 2345 95 20
+#description: Jopr Server
+#processname: run.sh
+RHQ_SERVER_HOME=/home/jon/jon/
+RHQ_SERVER_JAVA_HOME=/usr/lib/jvm/jre-1.6.0-openjdk' > /tmp/out 
+cat /etc/init.d/rhq-server.sh >> /tmp/out
+mv /tmp/out /etc/init.d/rhq-server.sh
+chmod 755 /etc/init.d/rhq-server.sh
+
+# rig JON as a service
+chkconfig --add rhq-server.sh
+chkconfig rhq-server.sh --list
+chkconfig --level 5 rhq-server.sh on

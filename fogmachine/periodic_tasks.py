@@ -25,7 +25,6 @@ def create_guest(host, profile, virt_name, expire_days, purpose, owner, cobbler_
     return newguest
 
 def find_suitable_host(profile):
-    print profile
     mem_needed = profile['virt_ram']
     vcpus_needed = profile['virt_cpus']
     virt_type = unicode(profile['virt_type'])
@@ -40,7 +39,6 @@ def update_free_mem():
         virt = getVirt(host)
         host.free_mem = virt.freemem()
         host.num_guests = virt.get_number_of_guests()
-        print host.hostname, host.free_mem, host.num_guests
     session.commit()
     
 def update_guest_states():
@@ -49,7 +47,7 @@ def update_guest_states():
 
 def retire_expired_guests():
     for guest in Guest.query.all():
-        if guest.expire_date > datetime.now():
+        if guest.expire_date < datetime.now():
             remove_guest(guest)
 
 def update_guest_state(guest):

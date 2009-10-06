@@ -1,0 +1,5 @@
+wget http://rm-rf.ca/~dgoodwin/rhq/rhq-agent.repo -O /etc/yum.repos.d/rhq-agent.repo
+
+source /etc/profile.d/rhq-agent-env.sh
+rhq-agent-configure --rhq-server=rhq.local.rm-rf.ca
+chkconfig rhq-agent on

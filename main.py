@@ -17,7 +17,7 @@ from fogmachine.config_reader import add_hosts
 
 #variables that you might want to change (location of cobbler host, vhost config file)
 #COBBLER_HOST = "vpn-12-144.rdu.redhat.com"
-COBBLER_HOST = "dhcp231-27.rdu.redhat.com"
+COBBLER_HOST = "marillion.rdu.redhat.com"
 COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
 COBBLER_USER = "cobbler"
 COBBLER_PASS = "dog8code"
