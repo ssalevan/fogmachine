@@ -2,10 +2,9 @@
 
 {% block mainbody %}
 
-    Current hosts and guests, as seen by Fogmachine:
+    It's time to...  ad-min-istraaaaaate:
     <div class="alignLeft">
     {% if hosts %}
-    
         <ul>
         {% for host in hosts %}
             <li>{{ host.hostname }} ({{ len(guests[host]) }} managed guests, 
@@ -15,10 +14,18 @@
                 {% for guest in guests[host] %}
                     <li>Virt Name: {{ guest.virt_name }}</li>
                     <ul>
+                        <li>Owner: <b>{{ guest.owner.username }}</b></li>
                         <li>Cobbler Profile: {{ guest.cobbler_profile }}</li>
                         <li>Expires at: {{ guest.expire_date }}</li>
                         <li>Current State: {{ guest.state }}</li>
                         <li>Purpose: {{ guest.purpose }}</li>
+                        <li><a href="/guest/{{ guest.id }}/start">Start</a> |
+                            <a href="/guest/{{ guest.id }}/stop">Stop</a> |
+                            <a href="/guest/{{ guest.id }}/pause">Pause</a> |
+                            <a href="/guest/{{ guest.id }}/unpause">Unpause</a> |
+                            <a href="/guest/{{ guest.id }}/restart">Restart</a> |
+                            <a href="/guest/{{ guest.id }}/delete">Delete</a>
+                        </li>
                     </ul>
                 {% end %}
                 </ul>

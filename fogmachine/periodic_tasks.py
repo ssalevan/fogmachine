@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import xmlrpclib
+import logging
 from datetime import datetime, timedelta
 
 from model import *
@@ -22,10 +23,19 @@ def create_guest(host, profile, virt_name, expire_days, purpose, owner, cobbler_
     session.commit()
     return newguest
 
+def find_suitable_host(profile):
+    mem_needed = profile['virt_ram']
+    vcpus_needed = profile['virt_cpus']
+    hosts = Host.query.filter(Host.free_mem >= mem_needed).order_by('free_mem').all()
+    if len(hosts) is 0:
+        return None
+    return hosts[0]
+
 def update_free_mem():
     for host in Host.query.all():
         virt = getVirt(host)
         host.free_mem = virt.freemem()
+        host.num_guests = virt.get_number_of_guests()
     session.commit()
     
 def update_guest_states():
@@ -39,7 +49,7 @@ def retire_expired_guests():
 
 def update_guest_state(guest):
     virt = getVirt(guest.host)
-    guest.status = virt.get_status(guest.virt_name)
+    guest.state = virt.get_status(guest.virt_name)
     session.commit()
 
 def remove_guest(guest):
@@ -48,3 +58,23 @@ def remove_guest(guest):
     virt.undefine(guest.virt_name)
     session.delete(guest)
     session.commit()
+    
+def start_guest(guest):
+    virt = getVirt(guest.host)
+    virt.create(guest.virt_name)
+    
+def shutdown_guest(guest):
+    virt = getVirt(guest.host)
+    virt.shutdown(guest.virt_name)
+    
+def restart_guest(guest):
+    shutdown_guest(guest)
+    start_guest(guest)
+    
+def pause_guest(guest):
+    virt = getVirt(guest.host)
+    virt.pause(guest.virt_name)
+    
+def unpause_guest(guest):
+    virt = getVirt(guest.host)
+    virt.unpause(guest.virt_name)

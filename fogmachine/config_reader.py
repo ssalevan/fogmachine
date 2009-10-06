@@ -22,9 +22,11 @@ def add_hosts(file_loc):
     for host in Host.query.all():
         if not (host.hostname, host.connection) in all_hosts:
             session.delete(host)
+            session.commit()
     # add new hosts (if any)
     for host in _read_config(file_loc):
         if not Host.get_by(hostname=host[0]):
+            print "Host: %s, %s" % (host[0], host[1])
             newhost = Host(hostname=host[0],
                 connection=host[1])
     session.commit()

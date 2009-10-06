@@ -1,34 +1,37 @@
 <html>
     <head>
         <title> {{ title }} </title>
-        <link rel="stylesheet" type="text/css" href="static/css/fogmachine.css" />
+        <link rel="stylesheet" type="text/css" href="/static/css/fogmachine.css" />
     </head>
     <body>
         <div id="titlebar">
             <a href="/">
-                <img border="0" width="507" height="188" alt="Home" src="static/images/fogmachine.jpg"/>
+                <img border="0" width="507" height="188" alt="Home" src="/static/images/fogmachine.jpg"/>
             </a>
             <div id="headertext">
                 {{ title }}
             </div>
             <div id="logintext">
                 {% if current_user %}
-                    Welcome, <a class="login" href="/profile"> {{ current_user }}</a>!
-                    | <a class="login" href="/reservations"> Your Reservations </a>
-                    | <a class="login" href="/logout"> Logout </a>
+                    Welcome, <a class="login" href="/user/profile"> {{ current_user }}</a>!
+                    | <a class="login" href="/guest/reservations"> Your Reservations </a>
+                {% if is_admin %}
+                    | <a class="login" href="/admin"> Admin Console </a>
+                {% end %}
+                    | <a class="login" href="/user/logout"> Logout </a>
                 {% else %}
-                    <a class="login" href="/login"> Login </a>
-                    | <a class="login" href="/register"> Register </a>
+                    <a class="login" href="/user/login"> Login </a>
+                    | <a class="login" href="/user/register"> Register </a>
                 {% end %}
             </div>
         </div>
         <div id="navbar">
             <a href="/"> Home </a>
-            | <a href="/list"> List Hosts/Guests </a>
-            | <a href="/checkout"> Checkout Guests </a>
+            | <a href="/guest/list"> List Hosts/Guests </a>
+            | <a href="/guest/checkout"> Checkout Guests </a>
         </div>
         
-        {% if not (errmsg == "None") %}
+        {% if len(errmsg) > 0 %}
             {% for line in errmsg.split('\n') %}
             <div id="errorbar">
                 {{ line }}
@@ -36,7 +39,7 @@
             {% end %}
         {% end %}
         
-        {% if not (statmsg == "None") %}
+        {% if len(statmsg) > 0 %}
             {% for line in statmsg.split('\n') %}
             <div id="statusbar">
                 {{ line }}

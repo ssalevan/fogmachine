@@ -338,4 +338,13 @@ class Virt(object):
         """
 
         self.__get_conn()
-        return self.conn.get_status(vmid)
+        return unicode(self.conn.get_status(vmid))
+        
+    def get_number_of_guests(self):
+        
+        """
+        Return the total amount of guests running on a host
+        """
+        
+        vms = self.list_vms()
+        return len(vms)
