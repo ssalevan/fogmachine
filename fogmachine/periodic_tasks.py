@@ -3,6 +3,7 @@
 import xmlrpclib
 import logging
 from datetime import datetime, timedelta
+from libvirt import libvirtError
 
 from model import *
 from virt import *
@@ -54,7 +55,10 @@ def update_guest_state(guest):
 
 def remove_guest(guest):
     virt = getVirt(guest.host)
-    virt.shutdown(guest.virt_name)
+    try:
+        virt.destroy(guest.virt_name)
+    except libvirtError:
+        pass # libvirt throws error if guest is already shutdown
     virt.undefine(guest.virt_name)
     session.delete(guest)
     session.commit()
@@ -66,6 +70,10 @@ def start_guest(guest):
 def shutdown_guest(guest):
     virt = getVirt(guest.host)
     virt.shutdown(guest.virt_name)
+    
+def destroy_guest(guest):
+    virt = getVirt(guest.host)
+    virt.destroy(guest.virt_name)
     
 def restart_guest(guest):
     shutdown_guest(guest)

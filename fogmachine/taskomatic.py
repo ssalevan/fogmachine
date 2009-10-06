@@ -98,7 +98,7 @@ class Taskomatic(object):
                 
             t = datetime(*datetime.now().timetuple()[:5])
             t += timedelta(minutes=1)
-            time.sleep((t - datetime.now()).seconds)
+            time.sleep((t - datetime.now()).seconds + 1)
                 
 def start_taskomatic():
     taskomatic = Taskomatic(

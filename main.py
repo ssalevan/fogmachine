@@ -16,8 +16,8 @@ from fogmachine.taskomatic import *
 from fogmachine.config_reader import add_hosts
 
 #variables that you might want to change (location of cobbler host, vhost config file)
-COBBLER_HOST = "vpn-12-144.rdu.redhat.com"
-#COBBLER_HOST = "dhcp231-27.rdu.redhat.com"
+#COBBLER_HOST = "vpn-12-144.rdu.redhat.com"
+COBBLER_HOST = "dhcp231-27.rdu.redhat.com"
 COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
 COBBLER_USER = "cobbler"
 COBBLER_PASS = "dog8code"
@@ -210,7 +210,12 @@ class ProfileHandler(BaseHandler):
             self.redirect("/profile")
                 
 class ReservationsHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
+        try:
+            update_guest_states()
+        except:
+            pass
         user = User.get_by(username=self.current_user)
         context = {
             'title': "Your Reservations",
@@ -274,6 +279,12 @@ class GuestActionHandler(BaseHandler):
                 self.send_statmsg("Successfully shut guest down.")
             except:
                 self.send_errmsg("Guest shutdown failed:\n%s" % traceback.format_exc())
+        elif action == "destroy":
+            try:
+                destroy_guest(guest)
+                self.send_statmsg("I totally destroyed that guest.")
+            except:
+                self.send_errmsg("Guest destruction failed:\n%s" % traceback.format_exc())
         elif action == "restart":
             try:
                 restart_guest(guest)
