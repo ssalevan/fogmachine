@@ -20,7 +20,8 @@ def create_guest(host, profile, virt_name, expire_days, purpose, owner, cobbler_
         expire_date=datetime.now() + timedelta(days=int(expire_days)),
         purpose=purpose,
         host=host,
-        owner=owner)
+        owner=owner,
+        mac_address=virt.get_mac_address(virt_name))
     session.commit()
     return newguest
 

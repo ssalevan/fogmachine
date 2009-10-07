@@ -26,6 +26,9 @@ class Guest(Entity):
     expire_date = Field(DateTime, required=True)
     purpose = Field(Unicode(255), default=u"It is a mystery...")
     state = Field(Unicode(255), default=u"unchecked")
+    mac_address = Field(Unicode(255))
+    ip_address = Field(Unicode(255))
+    hostname = Field(Unicode(255))
     host = ManyToOne('Host', required=True)
     owner = ManyToOne('User')
     

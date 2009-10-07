@@ -1,0 +1,8 @@
+# fogmachine ip/hostname update snippet
+mac=`ifconfig -a eth0 | grep HWaddr | sed '/^.*HWaddr */!d; s///;q'`
+ip=`ifconfig eth0 | grep 'inet addr' | sed 's/.*inet addr://' | sed 's/ .*//'`
+hostname=`hostname`
+fogmachine='$fogmachine_server'
+#raw 
+wget 'http://$fogmachine/guest/$mac/set?ip=$ip&hostname=$hostname'
+#end raw

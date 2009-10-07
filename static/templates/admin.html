@@ -15,6 +15,8 @@
                     <li>Virt Name: {{ guest.virt_name }}</li>
                     <ul>
                         <li>Owner: <b>{{ guest.owner.username }}</b></li>
+                        <li>Hostname: {{ guest.hostname }}</li>
+                        <li>IP Address: {{ guest.ip_address }}</li>
                         <li>Cobbler Profile: {{ guest.cobbler_profile }}</li>
                         <li>Expires at: {{ guest.expire_date }}</li>
                         <li>Current State: {{ guest.state }}</li>

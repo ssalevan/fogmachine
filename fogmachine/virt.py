@@ -21,6 +21,7 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 import os
 import libvirt
 import sub_process
+from xml.dom import minidom
 
 VIRT_STATE_NAME_MAP = {
    0 : "running",
@@ -67,6 +68,12 @@ class FuncLibvirtConnection(object):
 
         raise Exception("virtual machine %s not found" % vmid)
 
+    def get_mac_address(self, vmid):
+        vmxml = self.find_vm(vmid).XMLDesc(0)
+        vmdoc = minidom.parseString(vmxml)
+        macelement = vmdoc.getElementsByTagName('mac')[0]
+        return macelement.getAttribute('address')
+        
     def shutdown(self, vmid):
         return self.find_vm(vmid).shutdown()
 
@@ -343,8 +350,18 @@ class Virt(object):
     def get_number_of_guests(self):
         
         """
-        Return the total amount of guests running on a host
+        Return the total amount of guests running on a host.
         """
         
         vms = self.list_vms()
         return len(vms)
+        
+    def get_mac_address(self, vmid):
+        
+        """
+        Return the mac address of a supplied VM.
+        """
+
+        self.__get_conn()
+        return unicode(self.conn.get_mac_address(vmid))
+        

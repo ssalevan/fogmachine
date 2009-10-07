@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import os
 import pdb
+import re
 import logging
 import traceback
 import tornado.httpserver
@@ -249,17 +250,30 @@ class LogoutHandler(BaseHandler):
         self.redirect("/")
 
 class GuestActionHandler(BaseHandler):
-    @tornado.web.authenticated
     def get(self, guest_id, action):
         # guest_id-handling logic here
         guest = None
         curr_user = self.get_user_object()
         try:
-            guest = Guest.get(int(guest_id))
+            if re.match("([a-f0-9]{2}[:]?){5}[a-f0-9]{2}", guest_id):
+                # looking up by MAC address of guest
+                guest = Guest.get_by(mac_address=unicode(guest_id))
+            else:
+                # looking up by strict guest ID number
+                guest = Guest.get(int(guest_id))
         except:
             self.send_errmsg("Invalid guest ID.")
         # action-handling logic...  here
-        if not ((guest.owner == curr_user) or curr_user.is_admin):
+        if action == "set":
+            # handle special case of guests phoning home after kickstart
+            # obviously we can't utilize the user cookie, so this
+            # is more or less a gaping security hole
+            guest.ip_address = unicode(self.get_argument("ip"))
+            guest.hostname = unicode(self.get_argument("hostname"))
+            session.commit()
+            self.write("1")
+            return
+        elif not ((guest.owner == curr_user) or curr_user.is_admin):
             self.send_errmsg("You are not authorized to perform this action.")
         elif action == "delete":
             try:
@@ -317,7 +331,7 @@ application = tornado.web.Application([
     (r"/guest/list", ListHandler),
     (r"/guest/checkout", CheckoutHandler),
     (r"/guest/reservations", ReservationsHandler),
-    (r"/guest/([0-9]+)/([a-z]+)", GuestActionHandler),
+    (r"/guest/([0-9a-f:]+)/([a-z]+)", GuestActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),
