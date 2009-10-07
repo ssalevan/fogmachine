@@ -67,6 +67,12 @@ class FuncLibvirtConnection(object):
                 return vm
 
         raise Exception("virtual machine %s not found" % vmid)
+    
+    def get_vnc_port(self, vmid):
+        vmxml = self.find_vm(vmid).XMLDesc(0)
+        vmdoc = minidom.parseString(vmxml)
+        vncelement = vmdoc.getElementsByTagName('graphics')[0]
+        return vncelement.getAttribute('port')
 
     def get_mac_address(self, vmid):
         vmxml = self.find_vm(vmid).XMLDesc(0)
@@ -364,4 +370,13 @@ class Virt(object):
 
         self.__get_conn()
         return unicode(self.conn.get_mac_address(vmid))
+        
+    def get_vnc_port(self, vmid):
+    
+        """
+        Return the VNC port of a supplied VM (if running or specified in XML)
+        """
+        
+        self.__get_conn()
+        return unicode(self.conn.get_vnc_port(vmid))
         

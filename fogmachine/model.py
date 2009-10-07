@@ -29,6 +29,7 @@ class Guest(Entity):
     mac_address = Field(Unicode(255))
     ip_address = Field(Unicode(255))
     hostname = Field(Unicode(255))
+    vnc_port = Field(Unicode(255))
     host = ManyToOne('Host', required=True)
     owner = ManyToOne('User')
     

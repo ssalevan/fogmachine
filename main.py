@@ -68,6 +68,7 @@ class BaseHandler(RequestHandler):
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
+            divnum=0,
             errmsg=error,
             statmsg=status,
             **kwargs)   

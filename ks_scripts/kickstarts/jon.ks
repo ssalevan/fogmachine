@@ -8,7 +8,7 @@ clearpart --all --initlabel
 # Use text mode install
 text
 # Firewall configuration
-firewall --enabled
+firewall --disable
 # Run the Setup Agent on first boot
 firstboot --disable
 # System keyboard
