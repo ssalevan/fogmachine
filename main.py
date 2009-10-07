@@ -255,9 +255,9 @@ class GuestActionHandler(BaseHandler):
         guest = None
         curr_user = self.get_user_object()
         try:
-            if re.match("([a-f0-9]{2}[:]?){5}[a-f0-9]{2}", guest_id):
+            if re.match("([a-fA-F0-9]{2}[:]?){5}[a-fA-F0-9]{2}", guest_id):
                 # looking up by MAC address of guest
-                guest = Guest.get_by(mac_address=unicode(guest_id))
+                guest = Guest.get_by(mac_address=unicode(guest_id.lower()))
             else:
                 # looking up by strict guest ID number
                 guest = Guest.get(int(guest_id))
@@ -331,7 +331,7 @@ application = tornado.web.Application([
     (r"/guest/list", ListHandler),
     (r"/guest/checkout", CheckoutHandler),
     (r"/guest/reservations", ReservationsHandler),
-    (r"/guest/([0-9a-f:]+)/([a-z]+)", GuestActionHandler),
+    (r"/guest/([0-9a-fA-f:]+)/([a-z]+)", GuestActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),
