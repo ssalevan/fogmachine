@@ -3,10 +3,14 @@ import os
 import pdb
 import re
 import logging
+import logging.handlers
+import logging.config
 import traceback
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+
+from logging.handlers import RotatingFileHandler
 
 from tornado.web import RequestHandler
 
@@ -25,10 +29,10 @@ COBBLER_PASS = "dog8code"
 CONFIG_LOC = "./virthosts.conf"
 LISTEN_PORT = 8888
 
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s: %(message)s"
-LOG_LEVEL = logging.DEBUG
+#log settings
+LOG_CFGFILE = "./logging.conf"
+logging.config.fileConfig(LOG_CFGFILE)
 
-logging.basicConfig(level=LOG_LEVEL, format=LOG_FORMAT)
 log = logging.getLogger("fogmachine.main")
 
 def getCobbler():
@@ -68,7 +72,6 @@ class BaseHandler(RequestHandler):
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
-            divnum=0,
             errmsg=error,
             statmsg=status,
             **kwargs)   
@@ -84,11 +87,6 @@ class MainHandler(BaseHandler):
             
 class AdminHandler(BaseHandler):
     def get(self):
-        #TODO: put these in periodic handler
-        try:
-            update_guest_states()
-        except:
-            pass
         hosts = Host.query.order_by('hostname').all()
         guests = {}
         for s_host in hosts:
@@ -151,6 +149,8 @@ class CheckoutHandler(BaseHandler):
                 self.get_user_object(),
                 COBBLER_HOST)
             self.send_statmsg("Successfully checked out guest '%s' on %s." % (guest.virt_name, guest.host.hostname))
+            log.info("User %s checked out guest '%s' on %s" %
+                (self.get_current_user(), guest.virt_name, guest.host.hostname))
             self.redirect("/guest/reservations")
         except:
             self.send_errmsg("Checkout failed:\n%s" % traceback.format_exc())
@@ -214,10 +214,6 @@ class ProfileHandler(BaseHandler):
 class ReservationsHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
-        try:
-            update_guest_states()
-        except:
-            pass
         user = User.get_by(username=self.current_user)
         context = {
             'title': "Your Reservations",
@@ -234,18 +230,27 @@ class LoginHandler(BaseHandler):
         try:
             user = User.get_by(username=self.get_argument("username"))
             if user.password == self.get_argument("password"):
+                log.info("User %s logged in successfully." % 
+                    user.username)
                 self.set_secure_cookie("username", user.username)
                 self.send_statmsg("Successfully logged in.")
                 self.redirect("/")
             else:
+                log.info("User %s failed login." % 
+                    user.username)
                 self.send_errmsg("Username or password incorrect")
                 self.redirect("/user/login")
         except:
+            log.info("Failed login: username: %s, pass: %s." % 
+                (self.get_argument("username"), self.get_argument("password")))
+            log.info("Resulting traceback:\n%s" % traceback.format_exc())
             self.send_errmsg("Username or password incorrect")
             self.redirect("/user/login")
 
 class LogoutHandler(BaseHandler):
     def get(self):
+        log.info("User %s logged out successfully." % 
+                    self.get_current_user())
         self.clear_cookie("username")
         self.send_statmsg("Successfully logged out.")
         self.redirect("/")
@@ -272,54 +277,71 @@ class GuestActionHandler(BaseHandler):
             guest.ip_address = unicode(self.get_argument("ip"))
             guest.hostname = unicode(self.get_argument("hostname"))
             session.commit()
+            log.info("Guest %s registered with hostname: %s, ip: %s" %
+                (guest.virt_name, guest.hostname, guest.ip_address))
             self.write("1")
             return
         elif not ((guest.owner == curr_user) or curr_user.is_admin):
             self.send_errmsg("You are not authorized to perform this action.")
         elif action == "delete":
             try:
+                log.info("User %s deleted guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 remove_guest(guest)
                 self.send_statmsg("Successfully deleted guest.")
             except:
                 self.send_errmsg("Guest delete failed:\n%s" % traceback.format_exc())
         elif action == "start":
             try:
+                log.info("User %s started guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 start_guest(guest)
                 self.send_statmsg("Successfully started guest.")
             except:
                 self.send_errmsg("Guest start failed:\n%s" % traceback.format_exc())
         elif action == "stop":
             try:
+                log.info("User %s shutdown guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 shutdown_guest(guest)
                 self.send_statmsg("Successfully shut guest down.")
             except:
                 self.send_errmsg("Guest shutdown failed:\n%s" % traceback.format_exc())
         elif action == "destroy":
             try:
+                log.info("User %s destroyed guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 destroy_guest(guest)
                 self.send_statmsg("I totally destroyed that guest.")
             except:
                 self.send_errmsg("Guest destruction failed:\n%s" % traceback.format_exc())
         elif action == "restart":
             try:
+                log.info("User %s restarted guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 restart_guest(guest)
                 self.send_statmsg("Successfully restarted guest.")
             except:
                 self.send_errmsg("Guest restart failed:\n%s" % traceback.format_exc())
         elif action == "pause":
             try:
+                log.info("User %s paused guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 pause_guest(guest)
                 self.send_statmsg("Successfully paused guest.")
             except:
                 self.send_errmsg("Guest pause failed:\n%s" % traceback.format_exc())
         elif action == "unpause":
             try:
+                log.info("User %s unpaused guest %s." % 
+                    (curr_user.username, guest.virt_name))
                 unpause_guest(guest)
                 self.send_statmsg("Successfully unpaused guest.")
             except:
                 self.send_errmsg("Guest unpause failed:\n%s" % traceback.format_exc())
         else:
             self.send_errmsg("Invalid action.")
+        update_guest_state(guest)
         self.redirect(self.request.headers["Referer"])
 
 settings = {

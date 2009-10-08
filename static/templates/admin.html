@@ -29,6 +29,25 @@
                             <a href="/guest/{{ guest.id }}/restart">Restart</a> |
                             <a href="/guest/{{ guest.id }}/delete">Delete</a>
                         </li>
+                        {% if guest.state == "running" %}
+                        <li>
+                            <div id="vncDiv{{guests[host].index(guest)}}">
+                                <div id="vncLink{{guests[host].index(guest)}}">
+                                    <a href="javascript:;" 
+                                       onclick="addVNC('{{ guest.host.hostname }}',
+                                           '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests[host].index(guest) }}', '1')">
+                                       Open VNC Console (in popup)
+                                    </a>
+                                     | 
+                                    <a href="javascript:;" 
+                                       onclick="addVNC('{{ guest.host.hostname }}',
+                                           '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests[host].index(guest) }}', '0')">
+                                       Open VNC Console (inline)
+                                    </a>
+                                </div>
+                            </div>
+                        </li>
+                        {% end %}
                     </ul>
                 {% end %}
                 </ul>

@@ -29,8 +29,15 @@
                             <div id="vncDiv{{guests.index(guest)}}">
                                 <div id="vncLink{{guests.index(guest)}}">
                                     <a href="javascript:;" 
-                                       onclick="addVNC('{{ guest.host.hostname }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}')">
-                                       Open VNC Console
+                                       onclick="addVNC('{{ guest.host.hostname }}',
+                                           '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '1')">
+                                       Open VNC Console (in popup)
+                                    </a>
+                                     | 
+                                    <a href="javascript:;" 
+                                       onclick="addVNC('{{ guest.host.hostname }}',
+                                           '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '0')">
+                                       Open VNC Console (inline)
                                     </a>
                                 </div>
                             </div>
