@@ -35,6 +35,14 @@ logging.config.fileConfig(LOG_CFGFILE)
 
 log = logging.getLogger("fogmachine.main")
 
+def startup():
+    log.info("Turning on the Fogmachine...")
+    http_server = tornado.httpserver.HTTPServer(application)
+    http_server.listen(LISTEN_PORT)
+    add_hosts(CONFIG_LOC)
+    start_taskomatic()
+    tornado.ioloop.IOLoop.instance().start()
+
 def getCobbler():
     return xmlrpclib.Server(COBBLER_API)
     
@@ -363,9 +371,4 @@ application = tornado.web.Application([
     **settings)
     
 if __name__ == "__main__":
-    log.info("Turning on the Fogmachine...")
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(LISTEN_PORT)
-    add_hosts(CONFIG_LOC)
-    start_taskomatic()
-    tornado.ioloop.IOLoop.instance().start()
+    startup()

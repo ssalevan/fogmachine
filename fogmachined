@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+"""
+Wrapper for Fogmachine daemon
+
+Copyright 2009, Red Hat, Inc
+Steve Salevan <ssalevan@redhat.com>
+with code borrowed from Michael DeHaan's cobblerd startup script
+
+This software may be freely redistributed under the terms of the GNU
+general public license.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+"""
+
+import sys
+import os
+import main as app
+import traceback
+import optparse
+
+def daemonize_self():
+    # daemonizing code:  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # exit first parent
+            sys.exit(0)
+    except OSError, e:
+        print >>sys.stderr, "fork #1 failed: %d (%s)" % (e.errno, e.strerror)
+        sys.exit(1)
+
+    # decouple from parent environment
+    os.chdir("/")
+    os.setsid()
+    os.umask(0)
+
+    # do second fork
+    try:
+        pid = os.fork()
+        if pid > 0:
+            # print "Daemon PID %d" % pid
+            sys.exit(0)
+    except OSError, e:
+        print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
+        #utils.log_exc(logger)
+        sys.exit(1)
+
+    dev_null = file('/dev/null','rw')
+    os.dup2(dev_null.fileno(), sys.stdin.fileno())
+    os.dup2(dev_null.fileno(), sys.stdout.fileno())
+    os.dup2(dev_null.fileno(), sys.stderr.fileno())
+
+def main():
+    op = optparse.OptionParser()
+    op.set_defaults(daemonize=True, log_level=None)
+    op.add_option('-B', '--daemonize', dest='daemonize', action='store_true',
+        help='run in background (default)')
+    op.add_option('-F', '--no-daemonize', dest='daemonize', action='store_false',
+        help='run in foreground (do not daemonize)')
+    
+    options, args = op.parse_args()
+    
+    if options.daemonize:
+        daemonize_self()
+        
+    try:
+        app.startup()
+    except:
+        traceback.print_exc()
+
+if __name__ == "__main__":
+    main()
