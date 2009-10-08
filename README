@@ -1,5 +1,5 @@
 FOGMACHINE README
-A poignant and touching guide to setting up a mini-cloud
+A poignant and heartwarming guide to setting up a mini-cloud
 by Steve Salevan <ssalevan@redhat.com>
 v. 0.1
 -------------------------------------------------------------------------------
@@ -9,9 +9,8 @@ CONTENTS
 1. INTRODUCTION
 2. PREREQUISITES
 3. INSTALLING THIS MASSIVE THING
-4. DEFINING YOUR CLOUD
-5. BEST PRACTICES
-6. COMMENTS/ISSUES?
+4. BEST PRACTICES
+5. COMMENTS/ISSUES?
 
 1. INTRODUCTION
 ---------------
@@ -35,13 +34,14 @@ aspects of its functionality.
 
 2. PREREQUISITES
 ----------------
-First off, ensure that you have the following packages installed on your
-machine:
+First off, ensure that you have the following packages and their related
+dependencies installed on your machine:
 
 libvirt
 libvirt-python
 python
 python-devel
+python-elixir
 python-pycurl
 python-simplejson
 
@@ -50,8 +50,45 @@ the latest version of Tornado from its website:
 
 http://www.tornadoweb.org/
 
-Aaaaand...  you're done.
+Finally, ensure that you have a Cobbler server running and available and a
+number of machines (virtual hosts) running either the Xen or QEMU hypervisor.
 
 3. INSTALLING THIS MASSIVE THING
 --------------------------------
+At this early stage of development, configuration for Fogmachine is going to be
+a little front-heavy, and I apologize in advance for any pain and suffering
+you may experience.  Follow this sstep-by-step guide, though, and you should
+be golden:
 
+1. Edit main.py:
+Set the COBBLER_HOST variable to the hostname of your cobbler server.
+Set the LISTEN_PORT variable to the port you wish Tornado's HTTP server to
+listen on
+
+2. Edit fogmachine/model.py:
+(If you don't want to use the built-in sqlite database)
+Set the metadata.bind variable to the SQLAlchemy database connection string
+corresponding to the backend database you wish to use.  For more information:
+
+http://www.sqlalchemy.org/docs/05/reference/sqlalchemy/connections.html?highlig
+ht=create_engine#sqlalchemy.create_engine
+
+3. On Cobbler server, edit /etc/cobbler/settings:
+Add in the following line:
+fogmachine_server: <hostname:port to your fogmachine server>
+
+4. Copy the contents of the folders in fogmachine's ks_scripts folder into
+the corresponding directories in /var/lib/cobbler/
+
+5. Edit virthosts.conf:
+Add a line for each virtual host machine you wish to include within your
+'cloud'; instructions for doing so are provided within supplied config file
+
+6. Start the Fogmachine daemon by running the fogmachined executable in the
+fogmachine directory
+
+5. COMMENTS/ISSUES?
+-------------------
+At the moment, there is no trac or wiki available for Fogmachine, so if you
+run into issues related to Fogmachine, send me an e-mail at ssalevan@redhat.com
+and I'd be glad to help you out.
