@@ -1,0 +1,57 @@
+FOGMACHINE README
+A poignant and touching guide to setting up a mini-cloud
+by Steve Salevan <ssalevan@redhat.com>
+v. 0.1
+-------------------------------------------------------------------------------
+
+CONTENTS
+--------
+1. INTRODUCTION
+2. PREREQUISITES
+3. INSTALLING THIS MASSIVE THING
+4. DEFINING YOUR CLOUD
+5. BEST PRACTICES
+6. COMMENTS/ISSUES?
+
+1. INTRODUCTION
+---------------
+It seems that we hear the phrase 'cloud computing' every day, be it on Slashdot
+or in some marketing literature somewhere, yet few people can really give
+you a straight answer as to what a cloud is or how the concept can be used 
+to make your life easier.  Fogmachine aims to give some definition to these
+questions, to supply you with a means to create your own cloud, and to give
+you tools to manipulate the virtual machines running inside your cloud.
+
+Fogmachine is based upon Facebook's shiny new Tornado framework and works in
+tandem with Cobbler, Michael DeHaan's awesome provisioning tool.  Cobbler is
+used to provision virtual guests, while libvirt is used to query virtual guests
+and hosts for pertinent information.
+
+Finally, a disclaimer...  Fogmachine is a massive hack, inside a bug, 
+wrapped in a kludge.  I wouldn't recommend running it in production unless you 
+possess an ace team of crackerjack security and performance experts to aid you
+in its deployment, as little mind has been paid towards these particular
+aspects of its functionality.
+
+2. PREREQUISITES
+----------------
+First off, ensure that you have the following packages installed on your
+machine:
+
+libvirt
+libvirt-python
+python
+python-devel
+python-pycurl
+python-simplejson
+
+Next, as it isn't yet packaged for any Linux distribution, download and install
+the latest version of Tornado from its website:
+
+http://www.tornadoweb.org/
+
+Aaaaand...  you're done.
+
+3. INSTALLING THIS MASSIVE THING
+--------------------------------
+
