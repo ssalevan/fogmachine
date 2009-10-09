@@ -264,6 +264,10 @@ class LogoutHandler(BaseHandler):
         self.redirect("/")
 
 class GuestActionHandler(BaseHandler):
+    """
+    Handles actions for guests in a REST-ful manner, such as setting
+    hostname/ip or running libvirt calls (create, destroy, undefine, etc.)
+    """
     def get(self, guest_id, action):
         # guest_id-handling logic here
         guest = None
@@ -289,6 +293,13 @@ class GuestActionHandler(BaseHandler):
                 (guest.virt_name, guest.hostname, guest.ip_address))
             self.write("1")
             return
+        elif action == "getuser":
+            # handle another special case, where you want to get the username
+            # of the owner of the guest over HTTP...  useful for Satellite
+            # installations and the like
+            log.info("User info requested for guest %s." % guest.virt_name)
+            self.write("%s,%s" % (guest.owner.username, guest.owner.email))
+            return
         elif not ((guest.owner == curr_user) or curr_user.is_admin):
             self.send_errmsg("You are not authorized to perform this action.")
         elif action == "delete":
@@ -296,6 +307,7 @@ class GuestActionHandler(BaseHandler):
                 log.info("User %s deleted guest %s." % 
                     (curr_user.username, guest.virt_name))
                 remove_guest(guest)
+                guest = None
                 self.send_statmsg("Successfully deleted guest.")
             except:
                 self.send_errmsg("Guest delete failed:\n%s" % traceback.format_exc())

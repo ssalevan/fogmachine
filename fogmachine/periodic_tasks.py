@@ -80,6 +80,8 @@ def update_guest_state(guest):
     """
     Updates state (running status, vnc port) for a single Guest
     """
+    if guest == None:
+        return
     virt = getVirt(guest.host)
     guest.state = virt.get_status(guest.virt_name)
     guest.vnc_port = virt.get_vnc_port(guest.virt_name)

@@ -2,6 +2,9 @@ import re
 from model import Host, session
 
 def _read_config(file_loc):
+    """
+    Opens config file, strips comments, returns list of hosts specified
+    """
     cfg_file = open(file_loc, 'r')
     cfg_lines = cfg_file.readlines()
     entries = []
@@ -19,6 +22,9 @@ def _read_config(file_loc):
     return entries
     
 def add_hosts(file_loc):
+    """
+    Adds hosts contained within specified Fogmachine hosts config file
+    """
     all_hosts = _read_config(file_loc)
     # clean out hosts no longer present
     for host in Host.query.all():

@@ -31,6 +31,11 @@ def conv_to_set(obj):  # Allow single integer to be provided
 
 # The actual Event class
 class Task(object):
+    """
+    A Task is a wrapper class that pairs a Python method to run
+    frequency information so that Taskomatic can run them at the given
+    time intervals
+    """
     def __init__(self, action, min=allMatch, hour=allMatch, 
                        day=allMatch, month=allMatch, dow=allMatch, 
                        args=(), kwargs={}):
@@ -52,6 +57,10 @@ class Task(object):
                 (t.weekday()  in self.dow))
 
     def check(self, t):
+        """
+        Given time object t, checks to see if it is time to run the supplied
+        Python method
+        """
         log.debug( "Checking timematch for action: %s" % self.action )
         if self.matchtime(t):
             log.info("Running periodic task: %s" % self.action )
@@ -63,10 +72,18 @@ class Task(object):
             log.info( "Periodic task complete: %s" % self.action )
 
 class Taskomatic(object):
+    """
+    A reimplementation of Crontab in Python, ganked from the above site, with
+    a few bugfixes and the ability to run in a separate process added to suit
+    the needs of Fogmachine
+    """
     def __init__(self, *events):
         self.events = events
 
     def start(self):
+        """
+        Starts Taskomatic in a separate process by calling os.fork()
+        """
         self.child = os.fork()
         if self.child == 0:
             return
@@ -74,6 +91,9 @@ class Taskomatic(object):
             self.run()
             
     def run(self):
+        """
+        Calls main Taskomatic loop, listens for SIGINT or fatal exceptions
+        """
         try:
             self.main_loop()
         except KeyboardInterrupt:
@@ -84,12 +104,20 @@ class Taskomatic(object):
             self.die()
             
     def die(self):
+        """
+        Called after Taskomatic catches exception, kills child process
+        """
         try:
             os.kill(self.child, signal.SIGKILL)
         except OSError:
             pass
         
     def main_loop(self):
+        """
+        Taskomatic main loop, checks every time interval set to determine
+        if a Task (a Python method wrapped with run frequency information)
+        should be executed
+        """
         log.info("Taskomatic started at %s." % datetime.now())
         t = datetime(*datetime.now().timetuple()[:5])
         while 1:
@@ -101,6 +129,10 @@ class Taskomatic(object):
             time.sleep((t - datetime.now()).seconds + 1)
                 
 def start_taskomatic():
+    """
+    Creates a new Taskomatic object, populates it with Fogmachine's
+    periodically-running tasks, and starts it in a separate process
+    """
     taskomatic = Taskomatic(
         Task(retire_expired_guests, min=0),
         Task(update_free_mem, min=range(0,60,5)),
