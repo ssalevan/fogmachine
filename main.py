@@ -63,7 +63,7 @@ class BaseHandler(RequestHandler):
     def get_user_object(self):
         return User.get_by(username=self.get_current_user())
     def user_has_guest_auth(self, guest):
-        return ((guest.owner == self.get_user_object) or self.get_user_object.is_admin)
+        return ((guest.owner == self.get_user_object()) or self.get_user_object().is_admin)
     def get_guest_object(self, guest_id):
         guest = None
         try:
