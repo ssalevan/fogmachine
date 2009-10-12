@@ -8,6 +8,11 @@
         {% for guest in guests %}
             <ul>
                 <li>Virt Name: {{ guest.virt_name }} (<a href="/guest/{{ guest.id }}/refresh">refresh status</a>)</li>
+                <li> <form action="/guest/{{ guest.id }}/extend" method="post">
+                        Extend reservation by <input type="text" name="days" size=3> days
+                        <input type="submit" value="Extend!">
+                     </form>
+                </li>
                 <ul>
                     <li>Hostname: {{ guest.hostname }}</li>
                     <li>IP Address: {{ guest.ip_address }}</li>
