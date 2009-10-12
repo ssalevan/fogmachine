@@ -292,7 +292,7 @@ class GuestActionHandler(BaseHandler):
             self.send_errmsg("You are not authorized to perform this action.")
         elif action == "extend":
             try:
-                extend_guest_days(guest, 
+                extend_guest_reservation(guest, 
                     int(self.get_argument("days").strip()))
             except:
                 self.send_errmsg("Reservation extension failed:\n%s" % 
