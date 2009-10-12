@@ -13,11 +13,10 @@
                 <ul>
                 {% for guest in guests[host] %}
                     <li>Virt Name: {{ guest.virt_name }} (<a href="/guest/{{ guest.id }}/refresh">refresh status</a>)</li>
-                    <li>Extend reservation by 
-                        <form action="/guest/{{ guest.id }}/extend" method="post">
-                            <input type="text" name="days"> days
+                    <li> <form action="/guest/{{ guest.id }}/extend" method="post">
+                            Extend reservation by <input type="text" name="days" size=3> days
                             <input type="submit" value="Extend!">
-                        </form>
+                         </form>
                     </li>
                     <ul>
                         <li>Owner: <b>{{ guest.owner.username }}</b></li>
