@@ -343,6 +343,14 @@ class GuestActionHandler(BaseHandler):
                 self.send_statmsg("Successfully restarted guest.")
             except:
                 self.send_errmsg("Guest restart failed:\n%s" % traceback.format_exc())
+        elif action == "refresh":
+            try:
+                log.info("User %s refreshed status for guest %s." % 
+                    (curr_user.username, guest.virt_name))
+                update_guest_state(guest)
+                self.send_statmsg("Successfully refreshed guest status.")
+            except:
+                self.send_errmsg("Guest refresh failed:\n%s" % traceback.format_exc())
         elif action == "pause":
             try:
                 log.info("User %s paused guest %s." % 

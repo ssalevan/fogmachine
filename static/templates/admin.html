@@ -12,7 +12,7 @@
             {% if len(guests[host]) > 0 %}
                 <ul>
                 {% for guest in guests[host] %}
-                    <li>Virt Name: {{ guest.virt_name }}</li>
+                    <li>Virt Name: {{ guest.virt_name }} (<a href="/guest/{{ guest.id }}/refresh">refresh status</a>)</li>
                     <ul>
                         <li>Owner: <b>{{ guest.owner.username }}</b></li>
                         <li>Hostname: {{ guest.hostname }}</li>
