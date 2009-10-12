@@ -14,6 +14,8 @@ from logging.handlers import RotatingFileHandler
 
 from tornado.web import RequestHandler
 
+from datetime import timedelta
+
 from fogmachine.model import *
 from fogmachine.periodic_tasks import *
 from fogmachine.virt import *
@@ -60,6 +62,20 @@ class BaseHandler(RequestHandler):
         return unicode(self.get_secure_cookie("username"))
     def get_user_object(self):
         return User.get_by(username=self.get_current_user())
+    def user_has_guest_auth(self, guest):
+        return ((guest.owner == curr_user) or curr_user.is_admin)
+    def get_guest_object(self, guest_id):
+        guest = None
+        try:
+            if re.match("([a-fA-F0-9]{2}[:]?){5}[a-fA-F0-9]{2}", guest_id):
+                # looking up by MAC address of guest
+                guest = Guest.get_by(mac_address=unicode(guest_id.lower()))
+            else:
+                # looking up by strict guest ID number
+                guest = Guest.get(int(guest_id))
+        except:
+            self.send_errmsg("Invalid guest ID.")
+        return guest
     def user_is_admin(self):
         try:
             return self.get_user_object().is_admin
@@ -268,19 +284,28 @@ class GuestActionHandler(BaseHandler):
     Handles actions for guests in a REST-ful manner, such as setting
     hostname/ip or running libvirt calls (create, destroy, undefine, etc.)
     """
-    def get(self, guest_id, action):
-        # guest_id-handling logic here
-        guest = None
+    def post(self, guest_id, action):
+        guest = self.get_guest_object(guest_id)
         curr_user = self.get_user_object()
-        try:
-            if re.match("([a-fA-F0-9]{2}[:]?){5}[a-fA-F0-9]{2}", guest_id):
-                # looking up by MAC address of guest
-                guest = Guest.get_by(mac_address=unicode(guest_id.lower()))
-            else:
-                # looking up by strict guest ID number
-                guest = Guest.get(int(guest_id))
-        except:
-            self.send_errmsg("Invalid guest ID.")
+        
+        if not self.user_has_guest_auth(guest):
+            self.send_errmsg("You are not authorized to perform this action.")
+        elif action == "extend":
+            try:
+                extend_guest_days(guest, 
+                    int(self.get_argument("days").strip()))
+            except:
+                self.send_errmsg("Reservation extension failed:\n%s" % 
+                    traceback.format_exc())
+        else:
+            self.send_errmsg("Invalid action.")
+        update_guest_state(guest)
+        self.redirect(self.request.headers["Referer"])
+    
+    def get(self, guest_id, action):
+        guest = self.get_guest_object(guest_id)
+        curr_user = self.get_user_object()
+        
         # action-handling logic...  here
         if action == "set":
             # handle special case of guests phoning home after kickstart
@@ -300,7 +325,7 @@ class GuestActionHandler(BaseHandler):
             log.info("User info requested for guest %s." % guest.virt_name)
             self.write("%s,%s" % (guest.owner.username, guest.owner.email))
             return
-        elif not ((guest.owner == curr_user) or curr_user.is_admin):
+        elif not self.user_has_guest_auth(guest):
             self.send_errmsg("You are not authorized to perform this action.")
         elif action == "delete":
             try:

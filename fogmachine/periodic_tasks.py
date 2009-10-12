@@ -34,6 +34,10 @@ def create_guest(host, profile, virt_name, expire_days, purpose, owner, cobbler_
     session.commit()
     return newguest
 
+def extend_guest_reservation(guest, days):
+    guest.expire_date = guest.expiredate + timedelta(days=days)
+    session.commit()
+
 def find_suitable_host(profile):
     """
     Given a Cobbler profile hash (taken from Cobbler's XMLRPC output),
