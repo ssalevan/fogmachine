@@ -14,8 +14,6 @@ from logging.handlers import RotatingFileHandler
 
 from tornado.web import RequestHandler
 
-from datetime import timedelta
-
 from fogmachine.model import *
 from fogmachine.periodic_tasks import *
 from fogmachine.virt import *
