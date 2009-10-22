@@ -31,12 +31,12 @@ def create_guest(host, profile, virt_name, expire_days, purpose, owner, cobbler_
         host=host,
         owner=owner,
         mac_address=virt.get_mac_address(virt_name))
-    session.commit()
+    session.flush()
     return newguest
 
 def extend_guest_reservation(guest, days):
     guest.expire_date = guest.expire_date + timedelta(days=days)
-    session.commit()
+    session.flush()
 
 def find_suitable_host(profile):
     """
@@ -62,7 +62,7 @@ def update_free_mem():
         virt = getVirt(host)
         host.free_mem = virt.freemem()
         host.num_guests = virt.get_number_of_guests()
-    session.commit()
+    session.flush()
     
 def update_guest_states():
     """
@@ -89,7 +89,7 @@ def update_guest_state(guest):
     virt = getVirt(guest.host)
     guest.state = virt.get_status(guest.virt_name)
     guest.vnc_port = virt.get_vnc_port(guest.virt_name)
-    session.commit()
+    session.flush()
 
 def remove_guest(guest):
     """
@@ -102,8 +102,10 @@ def remove_guest(guest):
     except libvirtError:
         pass # libvirt throws error if guest is already shutdown
     virt.undefine(guest.virt_name)
+    guest.host.guests.remove(guest)
+    guest.owner.guests.remove(guest)
     session.delete(guest)
-    session.commit()
+    session.flush()
     
 def start_guest(guest):
     """

@@ -1,7 +1,13 @@
+import elixir
+
+from sqlalchemy.orm import create_session,scoped_session, sessionmaker
+elixir.session = scoped_session(sessionmaker(autoflush=True,
+    transactional=True))
+
 from elixir import *
 
 #elixir/sqlalchemy specific config
-metadata.bind = "sqlite:///fogmachine.sqlite"
+metadata.bind = "mysql://fogmachine:dog8code@localhost/fogmachine?charset=utf8"
 metadata.bind.echo = False
 metadata.bind.autocommit = True
 
@@ -15,7 +21,8 @@ class Host(Entity):
     virt_type = Field(Unicode(255), required=True)
     free_mem = Field(Integer)
     num_guests = Field(Integer)
-    guests = OneToMany('Guest')
+    guests = OneToMany('Guest', cascade='all, delete-orphan')
+    using_options(tablename='host')
     
 class User(Entity):
     """
@@ -26,7 +33,7 @@ class User(Entity):
     password = Field(Unicode(255), required=True)
     email = Field(Unicode(255), required=True)
     is_admin = Field(Boolean, default=False)
-    guests = OneToMany('Guest')
+    guests = OneToMany('Guest', cascade='all, delete-orphan')
 
 class Guest(Entity):
     """
@@ -42,8 +49,8 @@ class Guest(Entity):
     ip_address = Field(Unicode(255))
     hostname = Field(Unicode(255))
     vnc_port = Field(Unicode(255))
-    host = ManyToOne('Host', required=True)
-    owner = ManyToOne('User')
+    host = ManyToOne('Host', required=True, ondelete='cascade', onupdate='cascade')
+    owner = ManyToOne('User', ondelete='cascade', onupdate='cascade')
     
 setup_all()
 create_all()

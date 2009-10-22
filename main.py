@@ -22,15 +22,15 @@ from fogmachine.config_reader import add_hosts
 
 #variables that you might want to change (location of cobbler host, vhost config file)
 #COBBLER_HOST = "vpn-12-144.rdu.redhat.com"
-COBBLER_HOST = "marillion.rdu.redhat.com"
+COBBLER_HOST = "qe-blade-01.idm.lab.bos.redhat.com"
 COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
 COBBLER_USER = "cobbler"
 COBBLER_PASS = "dog8code"
-CONFIG_LOC = "./virthosts.conf"
+CONFIG_LOC = "/usr/share/fogmachine/virthosts.conf"
 LISTEN_PORT = 8888
 
 #log settings
-LOG_CFGFILE = "./logging.conf"
+LOG_CFGFILE = "/usr/share/fogmachine/logging.conf"
 logging.config.fileConfig(LOG_CFGFILE)
 
 log = logging.getLogger("fogmachine.main")
@@ -91,6 +91,7 @@ class BaseHandler(RequestHandler):
         status = self.get_secure_cookie("statmsg")
         self.clear_cookie("errmsg")
         self.clear_cookie("statmsg")
+        session.remove()
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
@@ -236,6 +237,7 @@ class ProfileHandler(BaseHandler):
 class ReservationsHandler(BaseHandler):
     @tornado.web.authenticated
     def get(self):
+        session.clear()
         user = User.get_by(username=self.current_user)
         context = {
             'title': "Your Reservations",
