@@ -101,7 +101,7 @@ class BaseHandler(RequestHandler):
         status = self.get_secure_cookie("statmsg")
         self.clear_cookie("errmsg")
         self.clear_cookie("statmsg")
-        session.remove()
+        #session.remove()
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
@@ -165,22 +165,16 @@ class CheckoutHandler(BaseHandler):
     def post(self):
         try:
             cobbler = getCobbler()
-            profiles = cobbler.get_profiles()
-            selected_profile = None
-            for profile in profiles:
-                if profile['name'] == self.get_argument("profile"):
-                    selected_profile = profile
-            host = find_suitable_host(selected_profile)
-            if host is None:
+            profile = cobbler.get_profile(selected_profile)
+            guest = create_guest(
+                profile,
+                self.get_argument("virt_name"),
+                datetime.now() + timedelta(days=int(self.get_argument("expire_days"))),
+                self.get_argument("purpose"),
+                self.get_user_object())
+            if guest is None:
                 self.send_errmsg("Host resources inadequate for selected profile.  Try again!")
                 self.redirect("/guest/checkout")
-            guest = create_guest(host,
-                self.get_argument("profile"),
-                self.get_argument("virt_name"),
-                self.get_argument("expire_days"),
-                self.get_argument("purpose"),
-                self.get_user_object(),
-                COBBLER_HOST)
             self.send_statmsg("Successfully checked out guest '%s' on %s." % (guest.virt_name, guest.host.hostname))
             log.info("User %s checked out guest '%s' on %s" %
                 (self.get_current_user(), guest.virt_name, guest.host.hostname))

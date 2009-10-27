@@ -25,6 +25,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
 import xmlrpclib
 import logging
 import re
+import random
 import ConfigParser
 from datetime import datetime, timedelta
 from libvirt import libvirtError
@@ -90,7 +91,6 @@ def add_hosts(file_loc):
     for host in Host.query.all():
         if not [host.hostname, host.connection, host.virt_type] in all_hosts:
             session.delete(host)
-            session.flush()
     # add new hosts (if any)
     for host in _read_config(file_loc):
         if not Host.get_by(hostname=host[0]):
@@ -117,26 +117,66 @@ def get_available_ram(host):
     supplied host, equivalent to free memory - memory required for all managed
     guests
     """
-    stopped_guests = Guest.query.filter(host == host 
-        and state != "running").all()
+    stopped_guests = Guest.query.filter(Guest.host == host 
+        and Guest.state != u"running").all()
     stopped_guest_ram = sum([guest.ram_required for guest in stopped_guests])
     return host.free_mem - stopped_guest_ram
     
-def create_guest(host, ram_required, target, virt_name, expire_days, 
-    purpose, owner, cobbler_host, system=False):
+def get_random_mac():
+    """
+    from xend/server/netif.py
+    Generate a random MAC address.
+    Uses OUI 00-16-3E, allocated to
+    Xensource, Inc.  Last 3 fields are random.
+    return: MAC address string
+    """
+    mac = [ 0x00, 0x16, 0x3e,
+        random.randint(0x00, 0x7f),
+        random.randint(0x00, 0xff),
+        random.randint(0x00, 0xff) ]
+    return ':'.join(map(lambda x: "%02x" % x, mac))
+    
+def get_default_interface_for_system(system):
+    """
+    Cobbler system objects do not come with built-in interfaces; thus, this
+    function creates a default Ethernet interface...  alas, it's a bit of a
+    hack.
+    """
+    cobbler = getCobbler()
+    virt_bridge = cobbler.get_profile(system['profile'])['virt_bridge']
+    """
+    interface = {'eth0': 
+        {'dhcp_tag': '', 
+         'subnet': '', 
+         'virt_bridge': virt_bridge, 
+         'static_routes': [], 
+         'dns_name': '', 
+         'ip_address': '', 
+         'bonding': '', 
+         'static': False, 
+         'bonding_opts': '', 
+         'mac_address': get_random_mac(), 
+         'bonding_master': ''}}
+    """
+    return interface
+    
+def create_guest(target_obj, virt_name, expire_date, purpose, owner, system=False):
     """
     Creates a guest using the install() function from Virt then creates a database
     entry for the new guest, returning this entry for your pleasure
     """
+    host = find_suitable_host(target_obj, system)
+    if host is None:
+        return None
     virt = getVirt(host)
     if system:
-        virt.install(cobbler_host, profile, virt_name=virt_name, system=True)
+        virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, system=True)
     else:
-        virt.install(cobbler_host, profile, virt_name=virt_name)
+        virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name)
     newguest = Guest(virt_name=virt_name,
-        ram_required=ram_required,
-        cobbler_profile=target,
-        expire_date=datetime.now() + timedelta(days=int(expire_days)),
+        ram_required=target_obj['virt_ram'],
+        cobbler_profile=target_obj['name'],
+        expire_date=expire_date,
         purpose=purpose,
         host=host,
         owner=owner,
@@ -152,15 +192,18 @@ def extend_guest_reservation(guest, days):
     guest.expire_date = guest.expire_date + timedelta(days=days)
     session.flush()
 
-def find_suitable_host(profile):
+def find_suitable_host(target, system=False):
     """
     Given a Cobbler profile hash (taken from Cobbler's XMLRPC output),
     figures out what Host to provision the guest onto and returns this
     object
     """
-    mem_needed = profile['virt_ram']
-    vcpus_needed = profile['virt_cpus']
-    virt_type = unicode(profile['virt_type'])
+    if system:
+        # inherit information from system's associated Cobbler profile
+        target = getCobbler().get_profile(target['profile'])
+    mem_needed = target['virt_ram']
+    vcpus_needed = target['virt_cpus']
+    virt_type = unicode(target['virt_type'])
     hosts = Host.query.filter(Host.free_mem >= mem_needed and 
         Host.virt_type == virt_type).order_by('free_mem').all()
     if len(hosts) is 0:
@@ -177,9 +220,11 @@ def hosts_can_provision_group(group_template):
     
     # see if we have enough RAM
     ram_required = [getCobbler().get_profile(profile)['virt_ram']
-        for profile in cobbler_profiles].sort(reverse=True)
+        for profile in cobbler_profiles]
+    ram_required.sort(reverse=True)
     ram_on_each_host = [get_available_ram(host)
-        for host in Host.query.all()].sort(reverse=True)
+        for host in Host.query.all()]
+    ram_on_each_host.sort(reverse=True)
         
     for single_req in ram_required:
         space_allocated = False
@@ -345,7 +390,7 @@ def start_group(group):
     Starts all provisioned guests in a supplied group
     """
     guests = Guest.query.filter(Guest.group==group and 
-        Guest.state!='running' and Guest.is_provisioned==True).all()
+        Guest.state!=u'running' and Guest.is_provisioned==True).all()
     for guest in guests:
         start_guest(guest)
         
@@ -354,7 +399,7 @@ def shutdown_group(group):
     Shuts down all provisioned guests in a supplied group
     """
     guests = Guest.query.filter(Guest.group==group and
-        Guest.state!='shutdown' and Guest.is_provisioned==True).all()
+        Guest.state!=u'shutdown' and Guest.is_provisioned==True).all()
     for guest in guests:
         shutdown_guest(guest)
         
@@ -363,7 +408,7 @@ def pause_group(group):
     Pauses all provisioned guests in a supplied group
     """
     guests = Guest.query.filter(Guest.group==group and
-        Guest.state!='paused' and Guest.is_provisioned==True).all()
+        Guest.state!=u'paused' and Guest.is_provisioned==True).all()
     for guest in guests:
         pause_guest(guest)
         
@@ -372,7 +417,7 @@ def unpause_group(group):
     Unpauses all provisioned guests in a supplied group
     """
     guests = Guest.query.filter(Guest.group==group and
-        Guest.state=='paused' and Guest.is_provisioned==True).all()
+        Guest.state==u'paused' and Guest.is_provisioned==True).all()
     for guest in guests:
         unpause_guest(guest)
 
@@ -382,7 +427,7 @@ def provision_group_guest_stratum(group, guest_stratum):
     resulting guests into the 'guests' list of the supplied Group object
     """
     
-    if group_template == None:
+    if guest_stratum == None:
         send_group_complete_email(group)
         return
     
@@ -396,33 +441,41 @@ def provision_group_guest_stratum(group, guest_stratum):
         # create a unique Cobbler System object for the supplied profile and
         # metavars
         cobbler = getCobbler()
-        system = cobbler.new_system(getCobblerToken())
+        token = getCobblerToken()
+        virt_bridge = cobbler.get_profile(
+            guest_template.cobbler_profile)['virt_bridge']
+            
+        system = cobbler.new_system(token)
         cobbler.modify_system(system, "name",
-            "%s-%s" % (group.name, group_template.name), getCobblerToken())
+            "%s-%s" % (group.name, guest_template.name), token)
         cobbler.modify_system(system, "profile",
-            guest_template.cobbler_profile, getCobblerToken())
-        cobbler.modify_system(system, "ks_meta",
-            new_metavars, getCobblerToken())
-        cobbler.save_system(system, getCobblerToken())
+            guest_template.cobbler_profile, token)
+        cobbler.modify_system(system, "ksmeta",
+            new_metavars, token)
+        cobbler.modify_system(system, "modify_interface", {
+            "macaddress-eth0" : get_random_mac(),
+            "virtbridge-eth0" : virt_bridge
+        }, token)
+        
+        cobbler.save_system(system, token)
+        
+        sys_obj = cobbler.get_system("%s-%s" % (group.name, guest_template.name))
         
         # find a suitable host and get the required memory
-        host = find_suitable_host(
-            cobbler.get_profile(guest_template.cobbler_profile))
         ram_required = cobbler.get_profile(
             guest_template.cobbler_profile)['virt_ram']
             
         # create the guest based off of the System object we created
-        guest = create_guest(host, ram_required,
-            "%s-%s" % (group.name, group_template.name),
-            "%s-%s" % (group.name, group_template.name),
+        guest = create_guest(sys_obj,
+            u"%s-%s" % (group.name, guest_template.name),
             group.expire_date, group.purpose, group.owner,
-            COBBLER_HOST, system=True)
+            system=True)
         guest.group = group
         guest.guest_template = guest_template
         guest.guest_template.provisioned_guests.append(guest)
         session.flush()
     
-def create_group(group_template):
+def create_group(group_template, name, owner, expire_date, purpose):
     """
     Instantiates a group of machines based upon the supplied group template,
     requires a Cobbler object (as returned by main.py's getCobbler method)
@@ -430,6 +483,12 @@ def create_group(group_template):
     """
     if not hosts_can_provision_group(group_template):
         return False
+    group = Group(name=name,
+        owner=owner,
+        expire_date=expire_date,
+        purpose=purpose,
+        template=group_template)
+    session.flush()
     provision_group_guest_stratum(group, group_template.strata[0])
     return True
     
