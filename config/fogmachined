@@ -1,0 +1,111 @@
+#!/bin/sh
+#
+# fogmachined    Fogmachine helper daemon
+###################################
+
+# LSB header
+
+### BEGIN INIT INFO
+# Provides: fogmachined
+# Required-Start: cobblerd
+# Default-Start: 3 4 5
+# Short-Description: daemon for Fogmachine service
+# Description: This is a daemon that a provides the Fogmachine service
+### END INIT INFO
+
+# chkconfig header
+
+# chkconfig: 345 99 99 
+# description:  This is a daemon that provides the Fogmachine service
+#
+# processname: /usr/bin/fogmachined
+
+# Sanity checks.
+[ -x /usr/bin/fogmachined ] || exit 0
+
+DEBIAN_VERSION=/etc/debian_version
+SUSE_RELEASE=/etc/SuSE-release
+# Source function library.
+if [ -e $DEBIAN_VERSION ]; then
+
+	. /etc/init.d/functions
+elif [ -f $SUSE_RELEASE -a -r /etc/rc.status ]; then
+	. /etc/rc.status
+else
+	. /etc/rc.d/init.d/functions
+fi
+
+SERVICE=fogmachined
+PROCESS=fogmachined
+CONFIG_ARGS=" "
+if [ -e $DEBIAN_VERSION ]; then
+	LOCKFILE=/var/lock/$SERVICE
+else
+	LOCKFILE=/var/lock/subsys/$SERVICE
+fi
+
+RETVAL=0
+
+start() {
+    echo -n $"Starting fogmachine daemon: "
+    if [ -e $SUSE_RELEASE ]; then
+        startproc -f -p /var/run/$SERVICE.pid /usr/bin/fogmachined $CONFIG_ARGS
+        rc_status -v
+    else
+        daemon --check $SERVICE $PROCESS --daemonize $CONFIG_ARGS
+    fi
+    RETVAL=$?
+    echo
+    [ $RETVAL -eq 0 ] && touch $LOCKFILE
+    return $RETVAL
+}
+
+stop() {
+    echo -n $"Stopping fogmachine daemon: "
+    if [ -e $SUSE_RELEASE ]; then
+        killproc -TERM /usr/bin/fogmachined
+        rc_status -v
+    else
+        killproc $PROCESS
+    fi
+    RETVAL=$?
+    echo
+    if [ $RETVAL -eq 0 ]; then
+	rm -f $LOCKFILE
+        rm -f /var/run/$SERVICE.pid
+    fi
+}
+
+restart() {
+   stop
+   start
+}
+
+# See how we were called.
+case "$1" in
+    start|stop|restart)
+        $1
+        ;;
+    status)
+        if [ -e $SUSE_RELEASE ]; then
+            echo -n "Checking for service fogmachined "
+            checkproc /usr/bin/fogmachined
+            rc_status -v
+        else
+            status $PROCESS
+            RETVAL=$?
+        fi
+        ;;
+    condrestart)
+        [ -f $LOCKFILE ] && restart || :
+        ;;
+    reload)
+        echo "can't reload configuration, you have to restart it"
+        RETVAL=$?
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        exit 1
+        ;;
+esac
+exit $RETVAL

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # Simple periodic task scheduler
-# mostly ganked from http://stackoverflow.com/questions/373335/suggestions-for-a-cron-like-scheduler-in-python
+# mostly ganked from:
+# http://stackoverflow.com/questions/373335/suggestions-for-a-cron-like-scheduler-in-python
 
 import logging
 import signal

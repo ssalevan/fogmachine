@@ -17,9 +17,17 @@ Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 import sys
 import os
-import main as app
 import traceback
 import optparse
+
+FOGMACHINE_PATH = "/usr/share/fogmachine"
+
+try:
+    sys.path.append(FOGMACHINE_PATH)
+    import main as app
+except:
+    traceback.print_exc()
+    sys.exit(-1)
 
 def daemonize_self():
     # daemonizing code:  http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66012

@@ -1,5 +1,12 @@
 import re
-from model import Host, session
+import ConfigParser
+
+FOGMACHINE_CFG = "/etc/fogmachine/fogmachine.conf"
+
+def get_fogmachine_config():
+    config = ConfigParser.ConfigParser()
+    config.read(FOGMACHINE_CFG)
+    return config
 
 def _read_config(file_loc):
     """
@@ -12,7 +19,7 @@ def _read_config(file_loc):
         # strip comments/surrounding whitespace
         line = re.sub("#.*","",line).strip()
         # check if line matches comma-separated entry pattern
-        if(re.match(".*,.*",line)):
+        if(re.match(".*,.*,.*",line)):
             entry = line.split(',')
             entries.append([
                 unicode(entry[0].strip()),
@@ -25,6 +32,8 @@ def add_hosts(file_loc):
     """
     Adds hosts contained within specified Fogmachine hosts config file
     """
+    from model import Host, session
+    
     all_hosts = _read_config(file_loc)
     # clean out hosts no longer present
     for host in Host.query.all():

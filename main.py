@@ -1,4 +1,27 @@
 #!/usr/bin/python
+"""
+main.py contains all the Tornado web handler code required to instantiate a
+Fogmachine server
+
+Copyright 2009, Red Hat, Inc
+Steve Salevan <ssalevan@redhat.com>
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+02110-1301  USA
+"""
+
 import os
 import pdb
 import re
@@ -18,19 +41,12 @@ from fogmachine.model import *
 from fogmachine.periodic_tasks import *
 from fogmachine.virt import *
 from fogmachine.taskomatic import *
-from fogmachine.config_reader import add_hosts
 
-#variables that you might want to change (location of cobbler host, vhost config file)
-#COBBLER_HOST = "vpn-12-144.rdu.redhat.com"
-COBBLER_HOST = "qe-blade-01.idm.lab.bos.redhat.com"
-COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
-COBBLER_USER = "cobbler"
-COBBLER_PASS = "dog8code"
-CONFIG_LOC = "/usr/share/fogmachine/virthosts.conf"
-LISTEN_PORT = 8888
+LISTEN_PORT = int(get_fogmachine_config().get('fogmachine', 'listen_port'))
 
-#log settings
-LOG_CFGFILE = "/usr/share/fogmachine/logging.conf"
+# log settings
+CONFIG_LOC = "/etc/fogmachine/virthosts.conf"
+LOG_CFGFILE = "/etc/fogmachine/logging.conf"
 logging.config.fileConfig(LOG_CFGFILE)
 
 log = logging.getLogger("fogmachine.main")
@@ -42,12 +58,6 @@ def startup():
     add_hosts(CONFIG_LOC)
     start_taskomatic()
     tornado.ioloop.IOLoop.instance().start()
-
-def getCobbler():
-    return xmlrpclib.Server(COBBLER_API)
-    
-def getCobblerToken():
-    return getCobbler().login(COBBLER_USER, COBBLER_PASS)
 
 class BaseHandler(RequestHandler):
     def validate_passwords(self):
@@ -199,7 +209,7 @@ class RegisterHandler(BaseHandler):
             newuser = User(username=self.get_argument("username"),
                 password=self.get_argument("password"),
                 email=self.get_argument("email"))
-            session.commit()
+            session.flush()
             self.set_secure_cookie("username", newuser.username)
             self.send_statmsg("Successfully created account '%s'." % newuser.username)
             self.redirect("/")
@@ -227,7 +237,7 @@ class ProfileHandler(BaseHandler):
             user = User.get_by(username=self.current_user)
             user.password = self.get_argument("password")
             user.email = self.get_argument("email")
-            session.commit()
+            session.flush()
             self.send_statmsg("Successfully edited profile.")
             self.redirect("/user/profile")
         except:
@@ -319,10 +329,11 @@ class GuestActionHandler(BaseHandler):
             # is more or less a gaping security hole
             guest.ip_address = unicode(self.get_argument("ip"))
             guest.hostname = unicode(self.get_argument("hostname"))
-            session.commit()
+            session.flush()
             log.info("Guest %s registered with hostname: %s, ip: %s" %
                 (guest.virt_name, guest.hostname, guest.ip_address))
             self.write("1")
+            run_triggers(guest)
             return
         elif action == "getuser":
             # handle another special case, where you want to get the username
@@ -413,7 +424,7 @@ application = tornado.web.Application([
     (r"/guest/list", ListHandler),
     (r"/guest/checkout", CheckoutHandler),
     (r"/guest/reservations", ReservationsHandler),
-    (r"/guest/([0-9a-fA-f:]+)/([a-z]+)", GuestActionHandler),
+    (r"/guest/([0-9a-fA-F:]+)/([a-z]+)", GuestActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),

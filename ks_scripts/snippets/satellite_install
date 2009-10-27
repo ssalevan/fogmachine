@@ -1,0 +1,15 @@
+# quicker 'n dirtier post-kickstart RHN Satellite installation script
+
+# determine the username/email
+mac=`ifconfig -a eth0 | grep HWaddr | sed '/^.*HWaddr */!d; s///;q' | tr -d [:space:]`
+fogmachine='$fogmachine_server'
+#raw
+userinfo=`wget -O - "http://$fogmachine/guest/$mac/getuser"`
+#end raw
+username=`echo $userinfo | cut -d , -f 1`
+email=`echo $userinfo | cut -d , -f 2`
+
+# download the install-sat script
+cd /root/
+wget http://svn.rhndev.redhat.com/viewcvs/*checkout*/trunk/qa/automation/sat-install-script/install-sat.sh
+sh /root/install-sat.sh --user=$username --email=$email

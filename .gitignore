@@ -1,3 +1,5 @@
+#ignore build dirs
+build
 #ignore sqlite files
 *.sqlite
 #ignore editor temp files
@@ -6,3 +8,7 @@
 *.pyc
 #ignore logs
 *.log
+#ignore backups
+*.bak
+#ignore vi swaps
+*.swp
