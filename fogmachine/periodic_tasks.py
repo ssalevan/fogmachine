@@ -321,7 +321,7 @@ def run_triggers(guest):
     if not guest.is_provisioned:
         guest.is_provisioned = True
         session.flush()
-        send_provisioning_complete_email(guest)
+        send_guest_complete_email(guest)
         run_group_triggers(guest)
         
 def run_group_triggers(guest):
@@ -332,13 +332,14 @@ def run_group_triggers(guest):
     """
     if guest.group == None:
         return
-    # find guests in guest's group which are a member of its stratum
-    of_template = Guest.query.filter(Guest.group==guest.group and 
-        Guest.guest_template.stratum==guest.guest_template.stratum).all()
+    # get other guests in guest's group
+    of_group = Guest.query.filter(Guest.group==guest.group).all()
+    
     # check if provisioning is complete on the current guest stratum
-    for i_guest in of_template:
-        if not i_guest.is_provisioned:
-            return
+    for group_guest in of_group:
+        if (guest.guest_template.stratum == group_guest.guest_template.stratum):
+            if not group_guest.is_provisioned:
+                return
             
     next_strata = get_next_guest_stratum(guest.guest_template.stratum)
     provision_group_guest_stratum(guest.group, 
@@ -350,9 +351,9 @@ def get_next_guest_stratum(stratum):
     GuestStratum object
     """
     cur_level = stratum.strata_level
-    if len(stratum.parent.strata) == cur_level + 1:
+    if len(stratum.parent_template.strata) == cur_level + 1:
         return None
-    return stratum.parent.strata[cur_level + 1]
+    return stratum.parent_template.strata[cur_level + 1]
     
 def replace_fogmachine_variables(group, metavars):
     """
@@ -366,16 +367,19 @@ def replace_fogmachine_variables(group, metavars):
         # figure out matching text
         complete_match = elem.group(0)
         contents = elem.group(1).strip()
-        # get guest template and requested attribute
+        # get guest template and requested attribute from text
         guest_template = contents.split('.')[0]
         attribute = contents.split('.')[1]
-        # grab the corresponding guest from the supplied group
-        gt_obj = Guest.query.filter(group==group 
-            and guest_template.name==guest_template).one()
+        # grab the corresponding guest to the GuestTemplate 
+        # from the supplied group
+        gt_obj = GuestTemplate.query.filter(
+            GuestTemplate.name==guest_template).one()
+        guest_obj = Guest.query.filter(Guest.group==group
+            and Guest.guest_template==gt_obj).one()
         # get the requested attribute, pickle it, and replace the delimited 
         # text
-        replacement = str(getattr(gt_obj, attribute))
-        metavars.replace(complete_match, replacement)
+        replacement = str(getattr(guest_obj, attribute))
+        metavars = metavars.replace(complete_match, replacement)
     # convert metavar string to dict
     mv_dict = {}
     metavar_list = [metavar.strip() for metavar in metavars.split(',')]
