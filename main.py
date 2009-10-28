@@ -43,6 +43,11 @@ from fogmachine.virt import *
 from fogmachine.taskomatic import *
 from fogmachine.constants import *
 
+# log settings
+logging.config.fileConfig(LOG_CFGFILE)
+log = logging.getLogger("fogmachine.main")
+
+# table which maps textual actions to guest manipulation methods
 GUEST_ACTIONS = {
     'delete': remove_guest,
     'start': start_guest,
@@ -54,6 +59,7 @@ GUEST_ACTIONS = {
     'unpause': unpause_guest
 }
 
+# table which maps textual actions to group manipulation methods
 GROUP_ACTIONS = {
     'delete': remove_group,
     'start': start_group,
@@ -63,11 +69,6 @@ GROUP_ACTIONS = {
     'pause': pause_group,
     'unpause': unpause_group
 }
-
-# log settings
-logging.config.fileConfig(LOG_CFGFILE)
-
-log = logging.getLogger("fogmachine.main")
 
 def startup():
     log.info("Turning on the Fogmachine...")
@@ -398,15 +399,15 @@ class GroupActionHandler(BaseHandler):
         
         try:
             group_name = group.name
-            GROUP_ACTIONS[action](guest)
+            GROUP_ACTIONS[action](group)
             self.send_statmsg("Successfully ran '%s' action on group %s." %
-                (action, guest_name))
+                (action, group_name))
         except:
             self.send_errmsg("Group action %s failed:\n%s" % (action, traceback.format_exc()))
         
         # update the guest state (unless we've deleted it)
         if action != "delete":
-            update_group_state(guest)
+            update_group_state(group)
         
         self.redirect(self.request.headers["Referer"])
     
@@ -437,7 +438,7 @@ application = tornado.web.Application([
     (r"/guest/([0-9a-fA-F:]+)/([a-z]+)", GuestActionHandler),
     (r"/group/checkout", GroupCheckoutHandler),
     (r"/group/reservations", GroupReservationsHandler),
-    (r"/group/([0-9)/([a-z]+)", GroupActionHandler),
+    (r"/group/([0-9])/([a-z]+)", GroupActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),

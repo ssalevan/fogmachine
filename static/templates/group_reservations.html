@@ -13,7 +13,7 @@
                             <input type="submit" value="Extend!">
                          </form>
                     </li>
-                    <li>Expires at: {{ guest.expire_date }}</li>
+                    <li>Expires at: {{ group.expire_date }}</li>
                     <li>Purpose: {{ group.purpose }}</li>
                     <li><a href="/group/{{ group.id }}/start">Start</a> |
                         <a href="/group/{{ group.id }}/stop">Stop</a> |
@@ -38,22 +38,21 @@
                             <a href="/guest/{{ guest.id }}/destroy">Destroy (force stop)</a> |
                             <a href="/guest/{{ guest.id }}/pause">Pause</a> |
                             <a href="/guest/{{ guest.id }}/unpause">Unpause</a> |
-                            <a href="/guest/{{ guest.id }}/restart">Restart</a> |
-                            <a href="/guest/{{ guest.id }}/delete">Return Guest</a>
+                            <a href="/guest/{{ guest.id }}/restart">Restart</a>
                         </li>
                         {% if guest.state == "running" %}
                             <li>
-                                <div id="vncDiv{{groups.index(group)}}_{{group.guests.index(guest)}}">
-                                    <div id="vncLink{{groups.index(group)}}_{{group.guests.index(guest)}}">
+                                <div id="vncDiv{{group.guests.index(guest)}}">
+                                    <div id="vncLink{{group.guests.index(guest)}}">
                                         <a href="javascript:;" 
                                            onclick="addVNC('{{ guest.host.hostname }}',
-                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '1')">
+                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ group.guests.index(guest) }}', '1')">
                                            Open VNC Console (in popup)
                                         </a>
                                          | 
                                         <a href="javascript:;" 
                                            onclick="addVNC('{{ guest.host.hostname }}',
-                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '0')">
+                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ group.guests.index(guest) }}', '0')">
                                            Open VNC Console (inline)
                                         </a>
                                     </div>
