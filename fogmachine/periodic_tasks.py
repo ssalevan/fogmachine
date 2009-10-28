@@ -234,6 +234,15 @@ def retire_expired_guests():
         if guest.expire_date < datetime.now():
             remove_guest(guest)
 
+def update_group_state(group):
+    """
+    Updates state (running status, vnc port) for all Guests in a Group
+    """
+    if group == None:
+        return
+    for guest in group.guests:
+        update_guest_state(guest)
+
 def update_guest_state(guest):
     """
     Updates state (running status, vnc port) for a single Guest
@@ -374,6 +383,15 @@ def shutdown_group(group):
         Guest.state!=u'shutdown' and Guest.is_provisioned==True).all()
     for guest in guests:
         shutdown_guest(guest)
+        
+def destroy_group(group):
+    """
+    Destroys all provisioned guests in a supplied group
+    """
+    guests = Guest.query.filter(Guest.group==group and
+        Guest.state!=u'shutdown' and Guest.is_provisioned==True).all()
+    for guest in guests:
+        destroy_guest(guest)
         
 def pause_group(group):
     """

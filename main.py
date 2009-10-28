@@ -43,6 +43,27 @@ from fogmachine.virt import *
 from fogmachine.taskomatic import *
 from fogmachine.constants import *
 
+GUEST_ACTIONS = {
+    'delete': remove_guest,
+    'start': start_guest,
+    'stop': shutdown_guest,
+    'destroy': destroy_guest,
+    'restart': restart_guest,
+    'refresh': update_guest_state,
+    'pause': pause_guest,
+    'unpause': unpause_guest
+}
+
+GROUP_ACTIONS = {
+    'delete': remove_group,
+    'start': start_group,
+    'stop': shutdown_group,
+    'destroy': destroy_group,
+    'refresh': update_group_state,
+    'pause': pause_group,
+    'unpause': unpause_group
+}
+
 # log settings
 logging.config.fileConfig(LOG_CFGFILE)
 
@@ -69,6 +90,8 @@ class BaseHandler(RequestHandler):
         return User.get_by(username=self.get_current_user())
     def user_has_guest_auth(self, guest):
         return ((guest.owner == self.get_user_object()) or self.get_user_object().is_admin)
+    def user_has_group_auth(self, group):
+        return ((group.owner == self.get_user_object()) or self.get_user_object().is_admin)
     def get_guest_object(self, guest_id):
         guest = None
         try:
@@ -81,6 +104,13 @@ class BaseHandler(RequestHandler):
         except:
             self.send_errmsg("Invalid guest ID.")
         return guest
+    def get_group_object(self, group_id):
+        group = None
+        try:
+            group = Group.get(int(group_id))
+        except:
+            self.send_errmsg("Invalid group ID.")
+        return group
     def user_is_admin(self):
         try:
             return self.get_user_object().is_admin
@@ -98,7 +128,7 @@ class BaseHandler(RequestHandler):
         status = self.get_secure_cookie("statmsg")
         self.clear_cookie("errmsg")
         self.clear_cookie("statmsg")
-        session.clear()
+        #session.clear()
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
@@ -162,7 +192,7 @@ class CheckoutHandler(BaseHandler):
     def post(self):
         try:
             cobbler = getCobbler()
-            profile = cobbler.get_profile(selected_profile)
+            profile = cobbler.get_profile(self.get_argument("profile"))
             guest = create_guest(
                 profile,
                 self.get_argument("virt_name"),
@@ -335,73 +365,17 @@ class GuestActionHandler(BaseHandler):
             return
         elif not self.user_has_guest_auth(guest):
             self.send_errmsg("You are not authorized to perform this action.")
-        elif action == "delete":
-            try:
-                log.info("User %s deleted guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                remove_guest(guest)
-                guest = None
-                self.send_statmsg("Successfully deleted guest.")
-            except:
-                self.send_errmsg("Guest delete failed:\n%s" % traceback.format_exc())
-        elif action == "start":
-            try:
-                log.info("User %s started guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                start_guest(guest)
-                self.send_statmsg("Successfully started guest.")
-            except:
-                self.send_errmsg("Guest start failed:\n%s" % traceback.format_exc())
-        elif action == "stop":
-            try:
-                log.info("User %s shutdown guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                shutdown_guest(guest)
-                self.send_statmsg("Successfully shut guest down.")
-            except:
-                self.send_errmsg("Guest shutdown failed:\n%s" % traceback.format_exc())
-        elif action == "destroy":
-            try:
-                log.info("User %s destroyed guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                destroy_guest(guest)
-                self.send_statmsg("I totally destroyed that guest.")
-            except:
-                self.send_errmsg("Guest destruction failed:\n%s" % traceback.format_exc())
-        elif action == "restart":
-            try:
-                log.info("User %s restarted guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                restart_guest(guest)
-                self.send_statmsg("Successfully restarted guest.")
-            except:
-                self.send_errmsg("Guest restart failed:\n%s" % traceback.format_exc())
-        elif action == "refresh":
-            try:
-                log.info("User %s refreshed status for guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                update_guest_state(guest)
-                self.send_statmsg("Successfully refreshed guest status.")
-            except:
-                self.send_errmsg("Guest refresh failed:\n%s" % traceback.format_exc())
-        elif action == "pause":
-            try:
-                log.info("User %s paused guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                pause_guest(guest)
-                self.send_statmsg("Successfully paused guest.")
-            except:
-                self.send_errmsg("Guest pause failed:\n%s" % traceback.format_exc())
-        elif action == "unpause":
-            try:
-                log.info("User %s unpaused guest %s." % 
-                    (curr_user.username, guest.virt_name))
-                unpause_guest(guest)
-                self.send_statmsg("Successfully unpaused guest.")
-            except:
-                self.send_errmsg("Guest unpause failed:\n%s" % traceback.format_exc())
-        else:
-            self.send_errmsg("Invalid action.")
+        
+        log.info("User %s ran action '%s' on guest %s." % 
+            (curr_user.username, action, guest.virt_name))
+        
+        try:
+            guest_name = guest.virt_name
+            GUEST_ACTIONS[action](guest)
+            self.send_statmsg("Successfully ran '%s' action on guest %s." %
+                (action, guest_name))
+        except:
+            self.send_errmsg("Guest action %s failed:\n%s" % (action, traceback.format_exc()))
         
         # update the guest state (unless we've deleted it)
         if action != "delete":
@@ -410,7 +384,31 @@ class GuestActionHandler(BaseHandler):
         self.redirect(self.request.headers["Referer"])
         
 class GroupActionHandler(BaseHandler):
-    pass
+    """
+    Handles actions for groups in a REST-ful manner
+    """
+    def get(self, group_id, action):
+        group = self.get_group_object(group_id)
+        if group == None:
+            # group lookup failed, redirect user to from whence they came
+            self.redirect(self.request.headers["Referer"])
+        curr_user = self.get_user_object()
+        if not self.user_has_group_auth(group):
+            self.send_errmsg("You are not authorized to perform this action.")
+        
+        try:
+            group_name = group.name
+            GROUP_ACTIONS[action](guest)
+            self.send_statmsg("Successfully ran '%s' action on group %s." %
+                (action, guest_name))
+        except:
+            self.send_errmsg("Group action %s failed:\n%s" % (action, traceback.format_exc()))
+        
+        # update the guest state (unless we've deleted it)
+        if action != "delete":
+            update_group_state(guest)
+        
+        self.redirect(self.request.headers["Referer"])
     
 class GroupCheckoutHandler(BaseHandler):
     pass
@@ -421,7 +419,7 @@ class GroupReservationsHandler(BaseHandler):
         user = User.get_by(username=self.current_user)
         context = {
             'title': "Your Group Reservations",
-            'guests': user.groups
+            'groups': user.groups
         }
         self.render("static/templates/group_reservations.html",
             **context)
