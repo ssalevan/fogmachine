@@ -1,0 +1,71 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Your current group reservations:
+    <div class="alignLeft">
+    {% if groups %}
+        {% for group in groups %}
+                <ul>
+                    <li>Group Name: {{ group.name }} (<a href="/group/{{ group.id }}/refresh">refresh status</a>)</li>
+                    <li> <form action="/group/{{ group.id }}/extend" method="post">
+                            Extend reservation by <input type="text" name="days" size=3> days
+                            <input type="submit" value="Extend!">
+                         </form>
+                    </li>
+                    <li>Expires at: {{ guest.expire_date }}</li>
+                    <li>Purpose: {{ group.purpose }}</li>
+                    <li><a href="/group/{{ group.id }}/start">Start</a> |
+                        <a href="/group/{{ group.id }}/stop">Stop</a> |
+                        <a href="/group/{{ group.id }}/destroy">Destroy (force stop)</a> |
+                        <a href="/group/{{ group.id }}/pause">Pause</a> |
+                        <a href="/group/{{ group.id }}/unpause">Unpause</a> |
+                        <a href="/group/{{ group.id }}/restart">Restart</a> |
+                        <a href="/group/{{ group.id }}/delete">Return Group</a>
+                    </li>
+                    {% for guest in group.guests %}
+                    <ul>
+                        <li>Virt Name: {{ guest.virt_name }} (<a href="/guest/{{ guest.id }}/refresh">refresh status</a>)</li>
+                        <li>Hostname: {{ guest.hostname }}</li>
+                        <li>IP Address: {{ guest.ip_address }}</li>
+                        <li>Cobbler Profile: {{ guest.cobbler_profile }}</li>
+                        <li>On Host: {{ guest.host.hostname }}</li>
+                        <li>Expires at: {{ guest.expire_date }}</li>
+                        <li>Current State: {{ guest.state }}</li>
+                        <li>Purpose: {{ guest.purpose }}</li>
+                        <li><a href="/guest/{{ guest.id }}/start">Start</a> |
+                            <a href="/guest/{{ guest.id }}/stop">Stop</a> |
+                            <a href="/guest/{{ guest.id }}/destroy">Destroy (force stop)</a> |
+                            <a href="/guest/{{ guest.id }}/pause">Pause</a> |
+                            <a href="/guest/{{ guest.id }}/unpause">Unpause</a> |
+                            <a href="/guest/{{ guest.id }}/restart">Restart</a> |
+                            <a href="/guest/{{ guest.id }}/delete">Return Guest</a>
+                        </li>
+                        {% if guest.state == "running" %}
+                            <li>
+                                <div id="vncDiv{{groups.index(group)}}_{{group.guests.index(guest)}}">
+                                    <div id="vncLink{{groups.index(group)}}_{{group.guests.index(guest)}}">
+                                        <a href="javascript:;" 
+                                           onclick="addVNC('{{ guest.host.hostname }}',
+                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '1')">
+                                           Open VNC Console (in popup)
+                                        </a>
+                                         | 
+                                        <a href="javascript:;" 
+                                           onclick="addVNC('{{ guest.host.hostname }}',
+                                               '{{ guest.virt_name }}', '{{ guest.vnc_port }}', '{{ guests.index(guest) }}', '0')">
+                                           Open VNC Console (inline)
+                                        </a>
+                                    </div>
+                                </div>
+                            </li>
+                        {% end %}
+                    </ul>
+                    {% end %}
+                </ul>
+            {% end %}
+    {% else %}
+        <p><b> No current reservations. </p></b>
+    {% end %}
+    
+{% end %}

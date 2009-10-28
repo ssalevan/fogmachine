@@ -29,16 +29,10 @@ elixir.session = scoped_session(sessionmaker(autoflush=True,
     autocommit=True))
 
 from elixir import *
-
-FOGMACHINE_CFG = "/etc/fogmachine/fogmachine.conf"
-
-def get_fogmachine_config():
-    config = ConfigParser.ConfigParser()
-    config.read(FOGMACHINE_CFG)
-    return config
+from constants import *
 
 #elixir/sqlalchemy specific config
-metadata.bind = get_fogmachine_config().get('fogmachine', 'database_connection')
+metadata.bind = DATABASE_CONNECTION
 metadata.bind.echo = False
 
 class Host(Entity):
@@ -63,7 +57,10 @@ class User(Entity):
     password = Field(Unicode(255), required=True)
     email = Field(Unicode(255), required=True)
     is_admin = Field(Boolean, default=False)
+    guest_notifications = Field(Boolean, default=True)
+    group_notifications = Field(Boolean, default=True)
     guests = OneToMany('Guest', cascade='all, delete-orphan')
+    groups = OneToMany('Group', cascade='all, delete-orphan')
 
 class Guest(Entity):
     """
@@ -94,6 +91,7 @@ class Group(Entity):
     name = Field(Unicode(255), required=True)
     owner = ManyToOne('User', required=True)
     expire_date = Field(DateTime, required=True)
+    is_provisioned = Field(Boolean, default=False)
     purpose = Field(Unicode(255), default=u"It is a mystery...")
     guests = OneToMany('Guest')
     template = ManyToOne('GroupTemplate')

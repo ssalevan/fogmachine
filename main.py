@@ -41,12 +41,9 @@ from fogmachine.model import *
 from fogmachine.periodic_tasks import *
 from fogmachine.virt import *
 from fogmachine.taskomatic import *
-
-LISTEN_PORT = int(get_fogmachine_config().get('fogmachine', 'listen_port'))
+from fogmachine.constants import *
 
 # log settings
-CONFIG_LOC = "/etc/fogmachine/virthosts.conf"
-LOG_CFGFILE = "/etc/fogmachine/logging.conf"
 logging.config.fileConfig(LOG_CFGFILE)
 
 log = logging.getLogger("fogmachine.main")
@@ -101,7 +98,7 @@ class BaseHandler(RequestHandler):
         status = self.get_secure_cookie("statmsg")
         self.clear_cookie("errmsg")
         self.clear_cookie("statmsg")
-        #session.remove()
+        session.clear()
         RequestHandler.render(self,
             template_name,
             is_admin=self.user_is_admin(),
@@ -405,8 +402,29 @@ class GuestActionHandler(BaseHandler):
                 self.send_errmsg("Guest unpause failed:\n%s" % traceback.format_exc())
         else:
             self.send_errmsg("Invalid action.")
-        update_guest_state(guest)
+        
+        # update the guest state (unless we've deleted it)
+        if action != "delete":
+            update_guest_state(guest)
+        
         self.redirect(self.request.headers["Referer"])
+        
+class GroupActionHandler(BaseHandler):
+    pass
+    
+class GroupCheckoutHandler(BaseHandler):
+    pass
+    
+class GroupReservationsHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        user = User.get_by(username=self.current_user)
+        context = {
+            'title': "Your Group Reservations",
+            'guests': user.groups
+        }
+        self.render("static/templates/group_reservations.html",
+            **context)
 
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
@@ -419,6 +437,9 @@ application = tornado.web.Application([
     (r"/guest/checkout", CheckoutHandler),
     (r"/guest/reservations", ReservationsHandler),
     (r"/guest/([0-9a-fA-F:]+)/([a-z]+)", GuestActionHandler),
+    (r"/group/checkout", GroupCheckoutHandler),
+    (r"/group/reservations", GroupReservationsHandler),
+    (r"/group/([0-9)/([a-z]+)", GroupActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),

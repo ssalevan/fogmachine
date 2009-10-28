@@ -26,26 +26,13 @@ import xmlrpclib
 import logging
 import re
 import random
-import ConfigParser
 from datetime import datetime, timedelta
 from libvirt import libvirtError
 from itertools import ifilter
 
 from model import *
 from virt import *
-
-FOGMACHINE_CFG = "/etc/fogmachine/fogmachine.conf"
-
-def get_fogmachine_config():
-    config = ConfigParser.ConfigParser()
-    config.read(FOGMACHINE_CFG)
-    return config
-
-COBBLER_HOST = get_fogmachine_config().get('fogmachine', 'cobbler_server')
-COBBLER_USER = get_fogmachine_config().get('fogmachine', 'cobbler_user')
-COBBLER_PASS = get_fogmachine_config().get('fogmachine', 'cobbler_password')
-
-COBBLER_API = "http://%s/cobbler_api" % COBBLER_HOST
+from constants import *
 
 def getCobbler():
     return xmlrpclib.Server(COBBLER_API)
@@ -136,46 +123,28 @@ def get_random_mac():
         random.randint(0x00, 0xff) ]
     return ':'.join(map(lambda x: "%02x" % x, mac))
     
-def get_default_interface_for_system(system):
-    """
-    Cobbler system objects do not come with built-in interfaces; thus, this
-    function creates a default Ethernet interface...  alas, it's a bit of a
-    hack.
-    """
-    cobbler = getCobbler()
-    virt_bridge = cobbler.get_profile(system['profile'])['virt_bridge']
-    """
-    interface = {'eth0': 
-        {'dhcp_tag': '', 
-         'subnet': '', 
-         'virt_bridge': virt_bridge, 
-         'static_routes': [], 
-         'dns_name': '', 
-         'ip_address': '', 
-         'bonding': '', 
-         'static': False, 
-         'bonding_opts': '', 
-         'mac_address': get_random_mac(), 
-         'bonding_master': ''}}
-    """
-    return interface
-    
 def create_guest(target_obj, virt_name, expire_date, purpose, owner, system=False):
     """
     Creates a guest using the install() function from Virt then creates a database
     entry for the new guest, returning this entry for your pleasure
     """
     host = find_suitable_host(target_obj, system)
+    
     if host is None:
         return None
+        
     virt = getVirt(host)
+    cobbler = getCobbler()
+    
     if system:
+        ram_required = cobbler.get_profile(target_obj['profile'])['virt_ram']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, system=True)
     else:
+        ram_required = target_obj['virt_ram']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name)
     newguest = Guest(virt_name=virt_name,
-        ram_required=target_obj['virt_ram'],
-        cobbler_profile=target_obj['name'],
+        ram_required=int(ram_required),
+        cobbler_profile=unicode(target_obj['name']),
         expire_date=expire_date,
         purpose=purpose,
         host=host,
@@ -290,7 +259,6 @@ def remove_guest(guest):
     
     # remove any links to guest from related tables
     guest.host.guests.remove(guest)
-    guest.owner.guests.remove(guest)
     if guest.guest_template != None:
         guest.guest_template.provisioned_guests.remove(guest)
         guest.group.guests.remove(guest)
@@ -432,6 +400,8 @@ def provision_group_guest_stratum(group, guest_stratum):
     """
     
     if guest_stratum == None:
+        group.is_provisioned = True
+        session.flush()
         send_group_complete_email(group)
         return
     
@@ -496,7 +466,7 @@ def create_group(group_template, name, owner, expire_date, purpose):
     provision_group_guest_stratum(group, group_template.strata[0])
     return True
     
-def delete_group(group):
+def remove_group(group):
     """
     Removes a group and all related bindings
     """
