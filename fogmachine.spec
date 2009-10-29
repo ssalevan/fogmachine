@@ -1,8 +1,9 @@
+%{!?python_sitelib: %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib()")}
 %define _binaries_in_noarch_packages_terminate_build 0
 
 Name:                   fogmachine
 Summary:                Cloud creation tool
-Version:                0.1
+Version:                0.1.0
 Release:                1%{?dist}
 Source0:                fogmachine-%{version}.tar.gz
 Epoch:                  0
@@ -33,7 +34,7 @@ Tornado framework to accomplish the heavy lifting, and it's got a swanky WebUI
 for your viewing pleasure.
 
 %prep
-setup -q
+%setup -q
 
 %install
 test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
@@ -81,18 +82,11 @@ test "x$RPM_BUILD_ROOT" != "x" && rm -rf $RPM_BUILD_ROOT
 %defattr(755,root,root)
 %dir /usr/share/fogmachine
 /usr/share/fogmachine/*
-%dir /usr/share/fogmachine/static
-/usr/share/fogmachine/static/*
-%dir /usr/share/fogmachine/static/applets
-/usr/share/fogmachine/static/applets/*
-%dir /usr/share/fogmachine/static/css
-/usr/share/fogmachine/static/css/*
-%dir /usr/share/fogmachine/static/images
-/usr/share/fogmachine/static/images/*
-%dir /usr/share/fogmachine/static/js
-/usr/share/fogmachine/static/js/*
-%dir /usr/share/fogmachine/static/templates
-/usr/share/fogmachine/static/templates/*
+
+%defattr(-,root,root)
+%if 0%{?fedora} > 8
+%{python_sitelib}/fogmachine*.egg-info
+%endif
 
 %doc AUTHORS CHANGELOG README COPYING
 

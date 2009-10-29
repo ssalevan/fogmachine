@@ -1,5 +1,7 @@
 #ignore build dirs
 build
+dist
+rpm-build
 #ignore sqlite files
 *.sqlite
 #ignore editor temp files

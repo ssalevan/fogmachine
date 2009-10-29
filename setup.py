@@ -2,7 +2,7 @@
 
 from distutils.core import setup
 
-VERSION = "0.1"
+VERSION = "0.1.0"
 SHORT_DESC = "WebUI-based cloud creation tool"
 LONG_DESC = """
 Fogmachine allows users to deploy virtual machines across a wide array of host
