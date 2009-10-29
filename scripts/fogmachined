@@ -44,7 +44,7 @@ def daemonize_self():
     os.chdir("/")
     os.setsid()
     os.umask(0)
-
+    
     # do second fork
     try:
         pid = os.fork()
@@ -55,8 +55,8 @@ def daemonize_self():
         print >>sys.stderr, "fork #2 failed: %d (%s)" % (e.errno, e.strerror)
         #utils.log_exc(logger)
         sys.exit(1)
-
-    dev_null = file('/dev/null','rw')
+    
+    dev_null = file('/var/log/fogmachine/fogmachined.out','w')
     os.dup2(dev_null.fileno(), sys.stdin.fileno())
     os.dup2(dev_null.fileno(), sys.stdout.fileno())
     os.dup2(dev_null.fileno(), sys.stderr.fileno())
@@ -77,7 +77,7 @@ def main():
     try:
         app.startup()
     except:
-        traceback.print_exc()
+        traceback.print_exc(file=open("/tmp/fogcrash2", 'w'))
 
 if __name__ == "__main__":
     main()

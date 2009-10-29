@@ -14,7 +14,7 @@ for your viewing pleasure.
 if __name__ == "__main__":
     # main Fogmachine directory
     sharepath     = "/usr/share/fogmachine"
-    logpath       = sharepath + "/logs"
+    logpath       = "/var/log/fogmachine"
     
     # webUI stuff
     staticpath    = sharepath + "/static"

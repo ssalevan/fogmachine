@@ -419,7 +419,7 @@ class GroupReservationsHandler(BaseHandler):
     def get(self):
         user = User.get_by(username=self.current_user)
         context = {
-            'title': "Your Group Reservations",
+            'title': "Group Reservations",
             'groups': user.groups
         }
         self.render("static/templates/group_reservations.html",
@@ -438,7 +438,7 @@ application = tornado.web.Application([
     (r"/guest/([0-9a-fA-F:]+)/([a-z]+)", GuestActionHandler),
     (r"/group/checkout", GroupCheckoutHandler),
     (r"/group/reservations", GroupReservationsHandler),
-    (r"/group/([0-9])/([a-z]+)", GroupActionHandler),
+    (r"/group/([0-9]+)/([a-z]+)", GroupActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),
