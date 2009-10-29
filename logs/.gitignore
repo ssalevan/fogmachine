@@ -1,8 +1,0 @@
-#ignore sqlite files
-*.sqlite
-#ignore editor temp files
-*~
-#ignore compiled python files
-*.pyc
-#ignore logs
-*.log
