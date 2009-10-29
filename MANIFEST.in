@@ -1,0 +1,12 @@
+recursive-include cfg_tmpl *
+recursive-include config *
+recursive-include ks_scripts *
+recursive-include static *
+include AUTHORS
+include CHANGELOG
+include COPYING
+include README
+include MANIFEST.in
+include Makefile
+include main.py
+include fogmachine.spec

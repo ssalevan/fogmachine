@@ -9,13 +9,13 @@ install: build
 	python setup.py install -f
 
 clean:
+	find . -name "*~" -exec rm -f '{}' \;
 	-rm -rf build rpm-build dist
-	-rm -f *~
+	-rm -f MANIFEST
 	-rm -f *.pyc
-	-rm -f fogmachine/*~
-	-rm -f static/css/*~
-	-rm -f static/templates/*~
+	-rm -f *.pyo
 	-rm -f fogmachine/*.pyc
+	-rm -f fogmachine/*.pyo
 	-rm -f *.tmp
 	-rm -f *.log
 	-rm -f *.sqlite
