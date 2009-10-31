@@ -44,6 +44,7 @@ python-devel
 python-elixir
 python-pycurl
 python-simplejson
+MySQL-python
 
 Next, as it isn't yet packaged for any Linux distribution, download and install
 the latest version of Tornado from its website:
