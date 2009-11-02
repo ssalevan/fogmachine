@@ -180,7 +180,7 @@ class CheckoutHandler(BaseHandler):
     def get(self):
         hosts = Host.query.order_by('hostname').all()
         cobbler = getCobbler()
-        profiles = cobbler.get_profiles()
+        profiles = find_fogmachine_profiles(cobbler.get_profiles())
         prof_names = [profile['name'] for profile in profiles]
         context = {
             'title': "Checkout Guests",

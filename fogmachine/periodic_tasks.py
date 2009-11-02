@@ -40,6 +40,16 @@ def getCobbler():
 def getCobblerToken():
     return getCobbler().login(COBBLER_USER, COBBLER_PASS)
 
+def find_fogmachine_profiles(profile_list):
+    """
+    Given a list of Cobbler profiles, finds profiles which contain a key
+    in their ks_meta field which match the string 'fogmachine' (indicating
+    that the supplied profile is, in fact, a profile which should be exposed to
+    Fogmachine
+    """
+    return ifilter(lambda elem: 'fogmachine' in elem['ks_meta'].keys(),
+        profile_list)
+
 def getVirt(host):
     """
     Convenience function:
@@ -269,7 +279,6 @@ def remove_guest(guest):
     # remove any links to guest from related tables
     guest.host.guests.remove(guest)
     if guest.guest_template != None:
-        guest.guest_template.provisioned_guests.remove(guest)
         guest.group.guests.remove(guest)
     
     # get rid of the durn thing
