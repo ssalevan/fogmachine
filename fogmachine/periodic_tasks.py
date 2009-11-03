@@ -419,6 +419,42 @@ def unpause_group(group):
         Guest.state==u'paused' and Guest.is_provisioned==True).all()
     for guest in guests:
         unpause_guest(guest)
+        
+def new_cobbler_system(name, cobbler_profile, metavars=None, hostname=None,
+    ip_address=None):
+    """
+    Creates a new Cobbler system object, runs a cobbler sync, and returns the
+    newly-created system object
+    """
+    cobbler = getCobbler()
+    token = getCobblerToken()
+    virt_bridge = cobbler.get_profile(cobbler_profile)['virt_bridge']
+    
+    interface = {
+        "macaddress-eth0" : get_random_mac(),
+        "virtbridge-eth0" : virt_bridge
+    }
+    if ip_address:
+        interface["ipaddress-eth0"] = ip_address
+        
+    system = cobbler.new_system(token)
+    cobbler.modify_system(system, "name",
+        name, token)
+    cobbler.modify_system(system, "profile",
+        cobbler_profile, token)
+    cobbler.modify_system(system, "ksmeta",
+        metavars, token)
+    cobbler.modify_system(system, "modify_interface",
+        interface, token)
+        
+    if hostname:
+        cobbler.modify_system(system, "hostname",
+            hostname, token)
+    
+    cobbler.save_system(system, token)
+    cobbler.sync()
+    
+    return cobbler.get_system(name)
 
 def provision_group_guest_stratum(group, guest_stratum):
     """
@@ -439,29 +475,13 @@ def provision_group_guest_stratum(group, guest_stratum):
         new_metavars = replace_fogmachine_variables(group,
             guest_template.metavars)
             
-        # create a unique Cobbler System object for the supplied profile and
-        # metavars
-        cobbler = getCobbler()
-        token = getCobblerToken()
-        virt_bridge = cobbler.get_profile(
-            guest_template.cobbler_profile)['virt_bridge']
+        system = new_cobbler_system(
+            "%s-%s" % (group.name, guest_template.name),
+            guest_template.cobbler_profile,
+            metavars=new_metavars,
+            hostname=None,
+            ip_address=None)
             
-        system = cobbler.new_system(token)
-        cobbler.modify_system(system, "name",
-            "%s-%s" % (group.name, guest_template.name), token)
-        cobbler.modify_system(system, "profile",
-            guest_template.cobbler_profile, token)
-        cobbler.modify_system(system, "ksmeta",
-            new_metavars, token)
-        cobbler.modify_system(system, "modify_interface", {
-            "macaddress-eth0" : get_random_mac(),
-            "virtbridge-eth0" : virt_bridge
-        }, token)
-        
-        cobbler.save_system(system, token)
-        
-        sys_obj = cobbler.get_system("%s-%s" % (group.name, guest_template.name))
-        
         # find a suitable host and get the required memory
         ram_required = cobbler.get_profile(
             guest_template.cobbler_profile)['virt_ram']
