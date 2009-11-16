@@ -2,6 +2,7 @@
 build
 dist
 rpm-build
+MANIFEST
 #ignore sqlite files
 *.sqlite
 #ignore editor temp files

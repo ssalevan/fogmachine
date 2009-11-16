@@ -4,15 +4,15 @@
     
     Reserve a guest using the below form:
     <form action="/guest/checkout" method="post">
-        Guest Profile:
-        {% if profiles %}
-            <select name="profile">
-            {% for profile in profiles %}
-                <option value="{{ profile }}">{{ profile }}</option>
+        Guest's Cobbler Target:
+        {% if targets %}
+            <select name="target">
+            {% for target in targets %}
+                <option value="{{ target }}">{{ target }}</option>
             {% end %}
             </select>
         {% else %}
-            <b> No profiles present! </b>
+            <b> No targets present! </b>
         {% end %}
         <br />
         Name your guest:

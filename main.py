@@ -181,11 +181,13 @@ class CheckoutHandler(BaseHandler):
         hosts = Host.query.order_by('hostname').all()
         cobbler = getCobbler()
         profiles = find_fogmachine_profiles(cobbler.get_profiles())
+        images = cobbler.get_images()
         prof_names = [profile['name'] for profile in profiles]
+        image_names = [image['name'] + ' [IMG]' for image in images]
         context = {
             'title': "Checkout Guests",
             'hosts': hosts,
-            'profiles': prof_names
+            'targets': prof_names + image_names
         }
         self.render("static/templates/checkout.html",
             **context)
@@ -193,15 +195,25 @@ class CheckoutHandler(BaseHandler):
     def post(self):
         try:
             cobbler = getCobbler()
-            profile = cobbler.get_profile(self.get_argument("profile"))
+            
+            if '[IMG]' in self.get_argument("target"):
+                image_name = self.get_argument("target").split('[IMG]')[0].strip()
+                target_obj = cobbler.get_image(image_name)
+                image = True
+            else:
+                target_obj = cobbler.get_profile(self.get_argument("target"))
+                image = False
+                
             guest = create_guest(
-                profile,
+                target_obj,
                 self.get_argument("virt_name"),
                 datetime.now() + timedelta(days=int(self.get_argument("expire_days"))),
                 self.get_argument("purpose"),
-                self.get_user_object())
+                self.get_user_object(),
+                image=image)
+                
             if guest is None:
-                self.send_errmsg("Host resources inadequate for selected profile.  Try again!")
+                self.send_errmsg("Host resources inadequate for selected target.  Try again!")
                 self.redirect("/guest/checkout")
             self.send_statmsg("Successfully checked out guest '%s' on %s." % (guest.virt_name, guest.host.hostname))
             log.info("User %s checked out guest '%s' on %s" %

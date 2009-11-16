@@ -96,17 +96,23 @@ def add_hosts(file_loc):
                 virt_type=host[2])
     session.flush()
     
-def get_cobbler_profiles_for_template(group_template):
+def get_cobbler_targets_for_template(group_template):
     """
     Returns the names of the cobbler profiles contained within a GroupTemplate
     object
     """
     cobbler_profiles = []
+    cobbler_images = []
     for stratum in group_template.strata:
         cobbler_profiles.extend(
-            [guest_temp.cobbler_profile
-                for guest_temp in stratum.elements])
-    return cobbler_profiles
+            ifilter(lambda elem: elem.cobbler_type='profile',
+                stratum.elements)
+        )
+        cobbler_images.extend(
+            ifilter(lambda elem: elem.cobbler_type='image',
+                stratum.elements)
+        )
+    return cobbler_profiles, cobbler_images
     
 def get_available_ram(host):
     """
@@ -133,7 +139,8 @@ def get_random_mac():
         random.randint(0x00, 0xff) ]
     return ':'.join(map(lambda x: "%02x" % x, mac))
     
-def create_guest(target_obj, virt_name, expire_date, purpose, owner, system=False):
+def create_guest(target_obj, virt_name, expire_date, purpose, owner, 
+    system=False, image=False):
     """
     Creates a guest using the install() function from Virt then creates a database
     entry for the new guest, returning this entry for your pleasure
@@ -146,15 +153,22 @@ def create_guest(target_obj, virt_name, expire_date, purpose, owner, system=Fals
     virt = getVirt(host)
     cobbler = getCobbler()
     
+    if image:
+        cobbler_type = 'image'
+        ram_required = target_obj['virt_ram']
+        virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, image=True)
     if system:
+        cobbler_type = 'system'
         ram_required = cobbler.get_profile(target_obj['profile'])['virt_ram']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, system=True)
     else:
+        cobbler_type = 'profile'
         ram_required = target_obj['virt_ram']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name)
     newguest = Guest(virt_name=virt_name,
         ram_required=int(ram_required),
-        cobbler_profile=unicode(target_obj['name']),
+        cobbler_target=unicode(target_obj['name']),
+        cobbler_type=cobbler_type,
         expire_date=expire_date,
         purpose=purpose,
         host=host,
@@ -195,12 +209,16 @@ def hosts_can_provision_group(group_template):
     a group can be provisioned within the confines of the resources 
     available from your current virtual hosts
     """
-    cobbler_profiles = get_cobbler_profiles_for_template(group_template)
+    cobbler_profiles, cobbler_images = get_cobbler_targets_for_template(
+        group_template)
     
     # see if we have enough RAM
     ram_required = [getCobbler().get_profile(profile)['virt_ram']
         for profile in cobbler_profiles]
+    ram_required.extend([getCobbler().get_image(image)['virt_ram']
+        for image in cobbler_images])
     ram_required.sort(reverse=True)
+    
     ram_on_each_host = [get_available_ram(host)
         for host in Host.query.all()]
     ram_on_each_host.sort(reverse=True)
@@ -280,6 +298,11 @@ def remove_guest(guest):
     guest.host.guests.remove(guest)
     if guest.guest_template != None:
         guest.group.guests.remove(guest)
+    
+    # remove Cobbler system  
+    if guest.guest_type == 'system':
+        getCobbler().remove_system(guest.name)
+        getCobbler().sync()
     
     # get rid of the durn thing
     session.delete(guest)
@@ -420,15 +443,27 @@ def unpause_group(group):
     for guest in guests:
         unpause_guest(guest)
         
-def new_cobbler_system(name, cobbler_profile, metavars=None, hostname=None,
-    ip_address=None):
+def new_cobbler_system(name, cobbler_target, metavars=None, hostname=None,
+    ip_address=None, image_based=False):
     """
     Creates a new Cobbler system object, runs a cobbler sync, and returns the
     newly-created system object
     """
     cobbler = getCobbler()
     token = getCobblerToken()
-    virt_bridge = cobbler.get_profile(cobbler_profile)['virt_bridge']
+    system = cobbler.new_system(token)
+    
+    cobbler.modify_system(system, "name",
+        name, token)
+    
+    if image_based:
+        virt_bridge = cobbler.get_image(cobbler_target)['virt_bridge']
+        cobbler.modify_system(system, "image",
+            cobbler_target, token)
+    else:
+        virt_bridge = cobbler.get_profile(cobbler_target)['virt_bridge']
+        cobbler.modify_system(system, "profile",
+            cobbler_target, token)
     
     interface = {
         "macaddress-eth0" : get_random_mac(),
@@ -436,14 +471,6 @@ def new_cobbler_system(name, cobbler_profile, metavars=None, hostname=None,
     }
     if ip_address:
         interface["ipaddress-eth0"] = ip_address
-        
-    system = cobbler.new_system(token)
-    cobbler.modify_system(system, "name",
-        name, token)
-    cobbler.modify_system(system, "profile",
-        cobbler_profile, token)
-    cobbler.modify_system(system, "ksmeta",
-        metavars, token)
     cobbler.modify_system(system, "modify_interface",
         interface, token)
         
@@ -451,6 +478,9 @@ def new_cobbler_system(name, cobbler_profile, metavars=None, hostname=None,
         cobbler.modify_system(system, "hostname",
             hostname, token)
     
+    cobbler.modify_system(system, "ksmeta",
+        metavars, token)
+        
     cobbler.save_system(system, token)
     cobbler.sync()
     
@@ -477,14 +507,16 @@ def provision_group_guest_stratum(group, guest_stratum):
             
         system = new_cobbler_system(
             "%s-%s" % (group.name, guest_template.name),
-            guest_template.cobbler_profile,
+            guest_template.cobbler_target,
             metavars=new_metavars,
             hostname=None,
-            ip_address=None)
+            ip_address=None,
+            image_based=(guest_template.cobbler_type=='image')
+        )
             
         # find a suitable host and get the required memory
         ram_required = cobbler.get_profile(
-            guest_template.cobbler_profile)['virt_ram']
+            guest_template.cobbler_target)['virt_ram']
             
         # create the guest based off of the System object we created
         guest = create_guest(sys_obj,
@@ -504,12 +536,14 @@ def create_group(group_template, name, owner, expire_date, purpose):
     """
     if not hosts_can_provision_group(group_template):
         return False
+        
     group = Group(name=name,
         owner=owner,
         expire_date=expire_date,
         purpose=purpose,
         template=group_template)
     session.flush()
+    
     provision_group_guest_stratum(group, group_template.strata[0])
     return True
     

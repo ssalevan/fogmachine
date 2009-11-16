@@ -242,7 +242,8 @@ class Virt(object):
 
         return memory
 
-    def install(self, server_name, target_name, system=False, virt_name=None, virt_path=None):
+    def install(self, server_name, target_name, system=False, image=False, 
+        virt_name=None, virt_path=None):
 
         """
         Install a new virt system by way of a named cobbler profile.
@@ -258,6 +259,8 @@ class Virt(object):
             raise Exception("no connection")
 
         target = "profile"
+        if image:
+            target = "image"
         if system:
             target = "system"
 

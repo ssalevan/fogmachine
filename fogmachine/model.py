@@ -57,6 +57,8 @@ class User(Entity):
     password = Field(Unicode(255), required=True)
     email = Field(Unicode(255), required=True)
     is_admin = Field(Boolean, default=False)
+    ssh_key = Field(Unicode(2047))
+    description = Field(Unicode(2047))
     guest_notifications = Field(Boolean, default=True)
     group_notifications = Field(Boolean, default=True)
     guests = OneToMany('Guest', cascade='all, delete-orphan')
@@ -68,7 +70,8 @@ class Guest(Entity):
     and the User that created it
     """
     virt_name = Field(Unicode(255), required=True)
-    cobbler_profile = Field(Unicode(255), required=True)
+    cobbler_target = Field(Unicode(255), required=True) #name of target
+    cobbler_type = Field(Unicode(255), required=True) #ie: 'profile', 'system'
     host = ManyToOne('Host', required=True, ondelete='cascade', onupdate='cascade')
     expire_date = Field(DateTime, required=True)
     ram_required = Field(Integer, required=True)
@@ -121,8 +124,11 @@ class GuestTemplate(Entity):
     Cobbler metavariables and information gleaned post-Fogmachine kickstart
     """
     name = Field(Unicode(255), required=True)
-    cobbler_profile = Field(Unicode(255), required=True)
+    cobbler_target = Field(Unicode(255), required=True)
+    cobbler_type = Field(Unicode(255), required=True)
     metavars = Field(Unicode(2047))
+    hostname = Field(Unicode(255))
+    ip_address = Field(Unicode(15))
     stratum = ManyToOne('GuestStratum')
     provisioned_guests = OneToMany('Guest')
        
