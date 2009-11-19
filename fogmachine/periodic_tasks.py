@@ -105,11 +105,11 @@ def get_cobbler_targets_for_template(group_template):
     cobbler_images = []
     for stratum in group_template.strata:
         cobbler_profiles.extend(
-            ifilter(lambda elem: elem.cobbler_type='profile',
+            ifilter(lambda elem: elem.cobbler_type=='profile',
                 stratum.elements)
         )
         cobbler_images.extend(
-            ifilter(lambda elem: elem.cobbler_type='image',
+            ifilter(lambda elem: elem.cobbler_type=='image',
                 stratum.elements)
         )
     return cobbler_profiles, cobbler_images
@@ -124,6 +124,16 @@ def get_available_ram(host):
         and Guest.state != u"running").all()
     stopped_guest_ram = sum([guest.ram_required for guest in stopped_guests])
     return host.free_mem - stopped_guest_ram
+    
+def get_available_cpus(host):
+    """
+    Gets the amount of Virtual CPUs available for provisioning new guests on the
+    supplied host, equivalent to free CPUs - CPUs required for all managed guests
+    """
+    stopped_guests = Guest.query.filter(Guest.host == host 
+        and Guest.state != u"running").all()
+    stopped_guest_cpus = sum([guest.cpus_required for guest in stopped_guests])
+    return host.free_cpus - stopped_guest_cpus
     
 def get_random_mac():
     """
@@ -156,17 +166,21 @@ def create_guest(target_obj, virt_name, expire_date, purpose, owner,
     if image:
         cobbler_type = 'image'
         ram_required = target_obj['virt_ram']
+        cpus_requierd = target_obj['virt_cpus']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, image=True)
     if system:
         cobbler_type = 'system'
         ram_required = cobbler.get_profile(target_obj['profile'])['virt_ram']
+        cpus_required = cobbler.get_profile(target_obj['profile'])['virt_cpus']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, system=True)
     else:
         cobbler_type = 'profile'
         ram_required = target_obj['virt_ram']
+        cpus_requierd = target_obj['virt_cpus']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name)
     newguest = Guest(virt_name=virt_name,
         ram_required=int(ram_required),
+        cpus_required=int(cpus_required),
         cobbler_target=unicode(target_obj['name']),
         cobbler_type=cobbler_type,
         expire_date=expire_date,
@@ -195,10 +209,11 @@ def find_suitable_host(target, system=False):
         # inherit information from system's associated Cobbler profile
         target = getCobbler().get_profile(target['profile'])
     mem_needed = target['virt_ram']
-    vcpus_needed = target['virt_cpus']
+    cpus_needed = target['virt_cpus']
     virt_type = unicode(target['virt_type'])
     hosts = Host.query.filter(Host.free_mem >= mem_needed and 
-        Host.virt_type == virt_type).order_by('free_mem').all()
+        Host.virt_type == virt_type and 
+        Host.free_cpus >= cpus_needed).order_by('free_mem').all()
     if len(hosts) is 0:
         return None
     return hosts[len(hosts) - 1]
@@ -244,6 +259,7 @@ def update_free_mem():
         virt = getVirt(host)
         host.free_mem = virt.freemem()
         host.num_guests = virt.get_number_of_guests()
+        host.free_cpus = virt.freecpus()
     session.flush()
     
 def update_guest_states():
@@ -350,9 +366,9 @@ def run_group_triggers(guest):
             if not group_guest.is_provisioned:
                 return
             
-    next_strata = get_next_guest_stratum(guest.guest_template.stratum)
+    next_stratum = get_next_guest_stratum(guest.guest_template.stratum)
     provision_group_guest_stratum(guest.group, 
-        next_strata)
+        next_stratum)
 
 def get_next_guest_stratum(stratum):
     """

@@ -241,6 +241,21 @@ class Virt(object):
                 memory = memory - int(vm.info()[2])/1024
 
         return memory
+        
+    def freecpus(self):
+        self.conn = self.__get_conn()
+        # Start with the total number of CPUs and subtract
+        cpus = self.conn.nodeinfo()[2]
+
+        vms = self.conn.find_vm(-1)
+        for vm in vms:
+            # Exclude stopped vms and Domain-0 by using
+            # ids greater than 0
+            if vm.ID() > 0:
+                # This node is active - remove its cpus
+                cpus -= int(vm.info()[3])
+
+        return cpus
 
     def install(self, server_name, target_name, system=False, image=False, 
         virt_name=None, virt_path=None):
