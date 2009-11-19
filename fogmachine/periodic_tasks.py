@@ -316,7 +316,7 @@ def remove_guest(guest):
         guest.group.guests.remove(guest)
     
     # remove Cobbler system  
-    if guest.guest_type == 'system':
+    if guest.cobbler_type == 'system':
         getCobbler().remove_system(guest.name)
         getCobbler().sync()
     
