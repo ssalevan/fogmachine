@@ -51,6 +51,8 @@ $SNIPPET('pre_anamon')
 
 %packages
 java-1.6.0-openjdk
+java-1.6.0-openjdk-devel
+git
 $SNIPPET('func_install_if_enabled')
 
 %post
@@ -67,7 +69,7 @@ $SNIPPET('redhat_register')
 $SNIPPET('cobbler_register')
 # Enable post-install boot notification
 $SNIPPET('post_anamon')
-$SNIPPET('jon_install')
+$SNIPPET('rhq_install')
 $SNIPPET('fogmachine_update')
 # Start final steps
 $kickstart_done

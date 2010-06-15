@@ -35,6 +35,18 @@ from constants import *
 metadata.bind = DATABASE_CONNECTION
 metadata.bind.echo = False
 
+class Machine(Entity):
+    """
+    Represents a physical machine available for reservation by
+    Fogmachine users
+    """
+    hostname = Field(Unicode(255), required=True)
+    owner = ManyToOne('User', ondelete='cascade', onupdate='cascade')
+    expire_date = Field(DateTime, required=True)
+    cobbler_target = Field(Unicode(255), required=True)
+    purpose = Field(Unicode(255), required=True)
+    is_provisioning = Field(Boolean, default=False)
+
 class Host(Entity):
     """
     Represents a Virtualized Host in the database, contains information
@@ -64,6 +76,7 @@ class User(Entity):
     group_notifications = Field(Boolean, default=True)
     guests = OneToMany('Guest', cascade='all, delete-orphan')
     groups = OneToMany('Group', cascade='all, delete-orphan')
+    machines = OneToMany('Machine', cascade='all, delete-orphan')
 
 class Guest(Entity):
     """

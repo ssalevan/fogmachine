@@ -1,0 +1,92 @@
+# quicker 'n dirtier post-kickstart RHQ installation script
+echo "
+#!/bin/bash
+# chkconfig: 2345 90 10
+# description: builds and installs RHQ upon restart of machine
+
+set -x -v
+exec 1>/root/rhq-install.log 2>&1
+
+# install postgres 8.2.14 because JON doesn't support postgres < 8.2
+rpm -Uvh http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-8.2.14-1PGDG.rhel5.i386.rpm http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-libs-8.2.14-1PGDG.rhel5.i386.rpm http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-server-8.2.14-1PGDG.rhel5.i386.rpm
+
+# clean off any old installations
+service rhq-server.sh stop
+rm -f /etc/init.d/rhq-server.sh
+rm -rf /home/rhq/
+userdel rhq
+su - postgres -c \"psql -c \\\"DROP DATABASE rhq;\\\"\"
+
+# add an RHQ user
+useradd rhq -p $6$XugnrnBjnNdMLzNu$6Aj67pB62YBlNCLw/tR9kwmxPHf0/RZu0qPijl77.r7iZhj2p6b1BPleUS.xXJAxCu3rsN3liSXUfcPzAy9dZ1
+
+# install maven tarball
+cd /root/
+wget $maven_url -O /root/maven.tar.bz2
+tar xvf /root/maven.tar.bz2
+rm -f /root/maven.tar.bz2
+mv /root/apache-maven* /opt/maven/
+
+# add pertinent environment variables to rhq user's bashrc
+echo \"
+export JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0/
+export M2_HOME=/opt/maven/
+export MAVEN_OPTS=\\\"-Xms128M -Xmx768M -XX:PermSize=128M -XX:MaxPermSize=256M\\\"
+export PATH=\\\\$PATH:\\\\$JAVA_HOME/bin:\\\\$M2_HOME/bin
+\" >> /home/rhq/.bashrc
+
+$SNIPPET('jon_postgres_setup')
+
+# determine the username/email
+mac=`ifconfig -a eth0 | grep HWaddr | sed '/^.*HWaddr */!d; s///;q' | tr -d [:space:]`
+fogmachine='$fogmachine_server'
+branch='$branch'
+#raw
+userinfo=\`wget -O - "http://\\$fogmachine/guest/\\$mac/getuser"\`
+username=\`echo \\$userinfo | cut -d , -f 1\`
+email=\`echo \\$userinfo | cut -d , -f 2\`
+
+# register this machine to RHN Hosted
+rhnreg_ks --username=\\$username --password=redhat --force --serverUrl=http://xmlrpc.rhn.webqa.redhat.com/XMLRPC
+
+# checkout rhq and switch to appropriate branch
+cd /home/rhq/
+git clone git://git.fedorahosted.org/git/rhq/rhq
+cd rhq/
+git checkout --track -b \\$branch origin/\\$branch
+
+mkdir /home/rhq/.m2/
+wget http://mgmt1.rhq.lab.eng.bos.redhat.com/rhq_additions/settings.xml -O /home/rhq/.m2/settings.xml
+
+chown -R rhq /home/rhq/
+
+su - rhq -c \"cd /home/rhq/rhq;mvn -Penterprise,dev -Dmaven.test.skip=true -Ddbsetup install\"
+
+cp /home/rhq/rhq/dev-container/bin/rhq-server.sh /etc/init.d
+
+# prepend chkconfig preamble
+echo \"
+#!/bin/sh
+#chkconfig: 2345 95 20
+#description: Jopr Server
+#processname: run.sh
+RHQ_SERVER_HOME=/home/rhq/rhq/dev-container/
+RHQ_SERVER_JAVA_HOME=/usr/lib/jvm/java-1.6.0-openjdk-1.6.0.0/
+\" > /tmp/out 
+
+cat /etc/init.d/rhq-server.sh >> /tmp/out
+mv -f /tmp/out /etc/init.d/rhq-server.sh
+chmod 755 /etc/init.d/rhq-server.sh
+
+# rig RHQ as a service
+chkconfig --add rhq-server.sh
+chkconfig rhq-server.sh --list
+chkconfig --level 5 rhq-server.sh on
+
+# start RHQ!
+service rhq-server.sh start
+#end raw
+chkconfig rhqinstall off
+" > /etc/init.d/rhqinstall
+chmod a+x /etc/init.d/rhqinstall
+chkconfig rhqinstall on

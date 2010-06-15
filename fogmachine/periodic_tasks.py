@@ -26,6 +26,7 @@ import xmlrpclib
 import logging
 import re
 import random
+import sub_process
 from datetime import datetime, timedelta
 from libvirt import libvirtError
 from itertools import ifilter
@@ -39,6 +40,13 @@ def getCobbler():
     
 def getCobblerToken():
     return getCobbler().login(COBBLER_USER, COBBLER_PASS)
+    
+def send_ssh(self, command, **kwargs):
+    ssh_args = ['/usr/bin/ssh',
+        'root@%s' % self.hostname]
+    for arg in command:
+        ssh_args.append(arg)
+    return sub_process.call(ssh_args, **kwargs)
 
 def find_fogmachine_profiles(profile_list):
     """
@@ -149,6 +157,22 @@ def get_random_mac():
         random.randint(0x00, 0xff) ]
     return ':'.join(map(lambda x: "%02x" % x, mac))
     
+def reprovision_machine(hostname, cobbler_profile):
+    """
+    Reprovisions the supplied machine with the supplied Cobbler
+    target object
+    """
+    reprov_command = ['/usr/bin/koan',
+        '--server=%s' % COBBLER_HOST,
+        '--replace-self',
+        '--profile=%s' % cobbler_profile]
+    rc = send_ssh(hostname, command)
+    if rc != 0:
+        raise Exception("koan returned %d" % rc)
+    reboot_command = ['/usr/bin/reboot']
+    send_ssh(hostname, reboot_command)
+    return True
+    
 def create_guest(target_obj, virt_name, expire_date, purpose, owner, 
     system=False, image=False):
     """
@@ -198,6 +222,14 @@ def extend_guest_reservation(guest, days):
     """
     guest.expire_date = guest.expire_date + timedelta(days=days)
     session.flush()
+    
+def extend_machine_reservation(machine, days):
+    """
+    Extends the expiration date for the supplied machine by the supplied 
+    number of days
+    """
+    machine.expire_date = machine.expire_date + timedelta(days=days)
+    session.flush()
 
 def find_suitable_host(target, system=False):
     """
@@ -207,13 +239,15 @@ def find_suitable_host(target, system=False):
     """
     if system:
         # inherit information from system's associated Cobbler profile
-        target = getCobbler().get_profile(target['profile'])
+        target = pt.getCobbler().get_profile(target['profile'])
     mem_needed = target['virt_ram']
     cpus_needed = target['virt_cpus']
     virt_type = unicode(target['virt_type'])
-    hosts = Host.query.filter(Host.free_mem >= mem_needed and 
-        Host.virt_type == virt_type and 
-        Host.free_cpus >= cpus_needed).order_by('free_mem').all()
+    
+    hosts = Host.query.filter_by(virt_type=virt_type)
+    hosts = hosts.filter(Host.free_mem >= mem_needed)
+    hosts = hosts.filter(Host.free_cpus >= cpus_needed).all()
+    
     if len(hosts) is 0:
         return None
     return hosts[len(hosts) - 1]

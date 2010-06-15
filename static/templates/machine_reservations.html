@@ -1,0 +1,39 @@
+{% extends base.html %}
+
+{% block mainbody %}
+
+    Your current machine reservations:
+    <div class="alignLeft">
+    {% if machines %}
+        {% for machine in machines %}
+            <ul>
+                <li>Machine Hostname: {{ machine.hostname }} (<a href="/machine/{{ machine.id }}/refresh">refresh status</a>)</li>
+                <li> <form action="/machine/{{ machine.id }}/extend" method="post">
+                        Extend reservation by <input type="text" name="days" size=3> days
+                        <input type="submit" value="Extend!">
+                     </form>
+                </li>
+                {% if targets %}
+                    <li>
+                        <form action="/machine/{{ machine.id }}/reprovision" method="post">
+                            Reprovision machine to:
+                            <select name="cobbler_target">
+                            {% for target in targets %}
+                                <option value="{{ target }}">{{ target }}</option>
+                            {% end %}
+                            </select>
+                            <input type="submit" value="Reprovision!">
+                         </form>
+                     </li>
+                {% else %}
+                    <!-- No cobbler targets present !-->
+                {% end %}
+                <li>Expires at: {{ guest.expire_date }}</li>
+                <li>Current State: {{ guest.state }}</li>
+            </ul>
+        {% end %}
+    {% else %}
+        <p><b> No current reservations. </p></b>
+    {% end %}
+    
+{% end %}

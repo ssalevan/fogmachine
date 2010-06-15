@@ -70,6 +70,10 @@ GROUP_ACTIONS = {
     'unpause': unpause_group
 }
 
+MACHINE_ACTIONS = {
+    'delete': remove_machine
+}
+
 def startup():
     log.info("Turning on the Fogmachine...")
     http_server = tornado.httpserver.HTTPServer(application)
@@ -89,6 +93,8 @@ class BaseHandler(RequestHandler):
         return unicode(self.get_secure_cookie("username"))
     def get_user_object(self):
         return User.get_by(username=self.get_current_user())
+    def user_has_machine_auth(self, machine):
+        return ((machine.owner == self.get_user_object()) or self.get_user_object().is_admin)
     def user_has_guest_auth(self, guest):
         return ((guest.owner == self.get_user_object()) or self.get_user_object().is_admin)
     def user_has_group_auth(self, group):
@@ -112,6 +118,13 @@ class BaseHandler(RequestHandler):
         except:
             self.send_errmsg("Invalid group ID.")
         return group
+    def get_machine_object(self, machine_id):
+        machine = None
+        try:
+            machine = Host.get(int(machine_id))
+        except:
+            self.send_errmsg("Invalid machine ID.")
+        return machine
     def user_is_admin(self):
         try:
             return self.get_user_object().is_admin
@@ -437,6 +450,112 @@ class GroupReservationsHandler(BaseHandler):
         self.render("static/templates/group_reservations.html",
             **context)
 
+class MachineCheckoutHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        machines = Machine.query.filter_by(owner=None).order_by("hostname").all()
+        cobbler = getCobbler()
+        context = {
+            'title': "Checkout Machines",
+            'machines': machines,
+            'targets': cobbler.getProfiles()
+        }
+        self.render("static/templates/checkout_machine.html",
+            **context)
+    
+    def post(self):
+        try:
+            reprovision = bool(self.get_argument("reprovision"))
+            
+            machine = Guest.get_by(hostname=unicode(self.get_argument("selected_machine")))
+            machine.owner = self.get_current_user()
+            machine.expire_date = datetime.now() + timedelta(days=int(self.get_argument("expire_days")))
+            
+            if reprovision:
+                machine.cobbler_target = unicode(self.get_argument("cobbler_target"))
+                reprovision_machine(self.get_argument("hostname"),
+                    machine.cobbler_target)
+                machine.is_provisioning = True
+            
+            session.flush()
+            log.info("User %s checked out machine '%s'." %
+                (self.get_current_user(), machine.hostname))
+            self.redirect("/machine/reservations")
+        except:
+            self.send_errmsg("Checkout failed:\n%s" % traceback.format_exc())
+            self.redirect("/machine/checkout")
+
+class MachineReservationsHandler(BaseHandler):
+    @tornado.web.authenticated
+    def get(self):
+        user = User.get_by(username=self.current_user)
+        cobbler = getCobbler()
+        context = {
+            'title': "Machine Reservations",
+            'machines': user.machines,
+            'targets': cobbler.getProfiles()
+        }
+        self.render("static/templates/machine_reservations.html",
+            **context)
+
+class MachineActionsHandler(BaseHandler):          
+    def get(self, machine_id, action):
+        machine = self.get_machine_object(machine_id)
+        if machine == None:
+            # group lookup failed, redirect user to from whence they came
+            self.redirect(self.request.headers["Referer"])
+        curr_user = self.get_user_object()
+        if not self.user_has_machine_auth(machine):
+            self.send_errmsg("You are not authorized to perform this action.")
+        
+        try:
+            machine_hostname = machine.hostname
+            MACHINE_ACTIONS[action](machine)
+            self.send_statmsg("Successfully ran '%s' action on group %s." %
+                (action, machine_hostname))
+        except:
+            self.send_errmsg("Machine action %s failed:\n%s" % (action, traceback.format_exc()))
+        
+        self.redirect(self.request.headers["Referer"])
+        
+    def post(self, machine_id, action):
+        machine = self.get_machine_object(machine_id)
+        if machine == None:
+            # group lookup failed, redirect user to from whence they came
+            self.redirect(self.request.headers["Referer"])
+        curr_user = self.get_user_object()
+        if not self.user_has_machine_auth(machine):
+            self.send_errmsg("You are not authorized to perform this action.")
+        elif action == "extend":
+            try:
+                log.info("User %s extended reservation for machine %s by %s days." % 
+                    (curr_user.username, 
+                     machine.hostname,
+                     int(self.get_argument("days").strip())))
+                extend_machine_reservation(machine, 
+                    int(self.get_argument("days").strip()))
+                self.send_statmsg("Successfully extended machine reservation by %s days." %
+                    int(self.get_argument("days").strip()))
+            except:
+                self.send_errmsg("Reservation extension failed:\n%s" % 
+                    traceback.format_exc())
+        elif action == "reprovision":
+            try:
+                log.info("User %s reprovisioned machine %s to: %s" % 
+                    (curr_user.username, 
+                     machine.hostname,
+                     self.get_argument("cobbler_target")))
+                machine.cobbler_target = unicode(self.get_argument("cobbler_target"))
+                reprovision_machine(machine.hostname,
+                    machine.cobbler_target)
+                machine.is_provisioning = True
+            except:
+                self.send_errmsg("Machine reprovision failed:\n%s" % 
+                    traceback.format_exc())
+        else:
+            self.send_errmsg("Invalid action.")
+        self.redirect(self.request.headers["Referer"])  
+        
 settings = {
     "static_path": os.path.join(os.path.dirname(__file__), "static"),
     "login_url": "/user/login",
@@ -451,6 +570,9 @@ application = tornado.web.Application([
     (r"/group/checkout", GroupCheckoutHandler),
     (r"/group/reservations", GroupReservationsHandler),
     (r"/group/([0-9]+)/([a-z]+)", GroupActionHandler),
+    (r"/machine/checkout", MachineCheckoutHandler),
+    (r"/machine/reservations", MachineReservationsHandler),
+    (r"/machine/([0-9]+)/([a-z]+)", MachineActionHandler),
     (r"/user/login", LoginHandler),
     (r"/user/logout", LogoutHandler),
     (r"/user/profile", ProfileHandler),

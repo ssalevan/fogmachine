@@ -1,0 +1,40 @@
+{% extends base.html %}
+
+{% block mainbody %}
+    {% if machines %}
+        Reserve a guest using the below form:
+        <form action="/machine/checkout" method="post">
+            Select your machine:
+            <select name="machine">
+                {% for machine in machines %}
+                    <option value="{{ machine }}">{{ machine }}</option>
+                {% end %}
+            </select>
+            <br />
+            Should it be reprovisioned?
+            <input type="checkbox" name="reprovision">
+            <br />
+            If so, to what target?
+            {% if targets %}
+                <select name="target">
+                {% for target in targets %}
+                    <option value="{{ target }}">{{ target }}</option>
+                {% end %}
+                </select>
+            {% else %}
+                <b> No targets present! </b>
+            {% end %}
+            <br />
+            Reason for reservation:
+            <input type="text" name="purpose">
+            <br />
+            Length of reservation (in days):
+            <input type="text" name="expire_days">
+            <br />
+            <input type="submit" value="Reserve!">
+        </form>
+    {% else %}
+        <b> No machines are currently free.  Try back later (or offer beer to your coworkers). </b>
+    {% end %}
+    
+{% end %}

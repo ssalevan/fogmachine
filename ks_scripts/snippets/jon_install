@@ -1,34 +1,20 @@
 # quick 'n dirty JON install script
 
+echo "
+#!/bin/bash
+# chkconfig: 2345 90 10
+# description: installs JON/JOPR/RHQ upon restart of machine
+
+# install postgres 8.2.14 because JON doesn't support postgres < 8.2
+rpm -Uvh http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-8.2.14-1PGDG.rhel5.i386.rpm http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-libs-8.2.14-1PGDG.rhel5.i386.rpm http://ftp9.us.postgresql.org/pub/mirrors/postgresql/binary/v8.2.14/linux/rpms/redhat/rhel-5-i386/postgresql-server-8.2.14-1PGDG.rhel5.i386.rpm
+
 # get jon and pop it into a new jon user directory
-wget http://jon01.qa.atl2.redhat.com:8042/dist/qa/jon-server-2.3.0-8299.zip -O /root/jon.zip
+wget $jon_url -O /root/jon.zip
 useradd jon -p $6$XugnrnBjnNdMLzNu$6Aj67pB62YBlNCLw/tR9kwmxPHf0/RZu0qPijl77.r7iZhj2p6b1BPleUS.xXJAxCu3rsN3liSXUfcPzAy9dZ1
 chown jon /root/jon.zip
 mv /root/jon.zip /home/jon
 
-# start postgres
-service postgresql initdb
-service postgresql start
-
-# rig postgres
-su - postgres -c "psql -c \"CREATE USER rhqadmin WITH PASSWORD 'rhqadmin';\""
-su - postgres -c "psql -c \"CREATE DATABASE rhq;\""
-su - postgres -c "psql -c \"GRANT ALL PRIVILEGES ON DATABASE rhq to rhqadmin;\""
-
-echo '
- # TYPE  DATABASE    USER        CIDR-ADDRESS          METHOD
-
- # "local" is for Unix domain socket connections only
- local   all         all                               trust
- # IPv4 local connections:
- host    all         all         127.0.0.1/32          trust
- host    all         all         10.0.0.1/8          md5
- # IPv6 local connections:
- host    all         all         ::1/128               trust
-' > /var/lib/pgsql/data/pg_hba.conf
-
-chkconfig postgresql on
-service postgresql restart
+$SNIPPET('jon_postgres_setup')
 
 # unzip jon
 su - jon -c 'unzip jon.zip'
@@ -52,3 +38,9 @@ chmod 755 /etc/init.d/rhq-server.sh
 chkconfig --add rhq-server.sh
 chkconfig rhq-server.sh --list
 chkconfig --level 5 rhq-server.sh on
+chkconfig joninstall off
+
+service rhq-server.sh start
+" > /etc/init.d/joninstall
+chmod a+x /etc/init.d/joninstall
+chkconfig joninstall on 

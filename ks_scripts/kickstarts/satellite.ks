@@ -29,7 +29,7 @@ reboot
 #Root password
 rootpw --iscrypted $default_password_crypted
 # SELinux configuration
-selinux --disabled
+selinux --permissive
 # Do not configure the X Window System
 skipx
 # System timezone
@@ -50,7 +50,6 @@ $SNIPPET('pre_install_network_config')
 $SNIPPET('pre_anamon')
 
 %packages
-java-1.6.0-openjdk
 $SNIPPET('func_install_if_enabled')
 
 %post
@@ -67,8 +66,8 @@ $SNIPPET('redhat_register')
 $SNIPPET('cobbler_register')
 # Enable post-install boot notification
 $SNIPPET('post_anamon')
-$SNIPPET('jon_install')
 $SNIPPET('fogmachine_update')
+$SNIPPET('satellite_install')
 # Start final steps
 $kickstart_done
 # End final steps
