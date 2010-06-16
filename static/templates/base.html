@@ -18,7 +18,6 @@
                     Welcome, <a class="login" href="/user/profile"> {{ current_user }}</a>!
                     | <a class="login" href="/guest/reservations"> Your Reservations </a>
                     | <a class="login" href="/group/reservations"> Group Reservations </a>
-                    | <a class="login" href="/machine/reservations"> Machine Reservations </a>
                 {% if is_admin %}
                     | <a class="login" href="/admin"> Admin Console </a>
                 {% end %}
@@ -33,7 +32,6 @@
             <a href="/"> Home </a>
             | <a href="/guest/list"> List Hosts/Guests </a>
             | <a href="/guest/checkout"> Checkout Guests </a>
-            | <a href="/machine/checkout"> Checkout Machines </a>
         </div>
         
         {% if len(errmsg) > 0 %}

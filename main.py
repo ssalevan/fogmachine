@@ -71,7 +71,7 @@ GROUP_ACTIONS = {
 }
 
 MACHINE_ACTIONS = {
-    'delete': remove_machine
+#    'delete': remove_machine
 }
 
 def startup():
@@ -498,7 +498,7 @@ class MachineReservationsHandler(BaseHandler):
         self.render("static/templates/machine_reservations.html",
             **context)
 
-class MachineActionsHandler(BaseHandler):          
+class MachineActionHandler(BaseHandler):          
     def get(self, machine_id, action):
         machine = self.get_machine_object(machine_id)
         if machine == None:
