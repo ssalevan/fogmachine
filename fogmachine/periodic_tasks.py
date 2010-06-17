@@ -190,7 +190,7 @@ def create_guest(target_obj, virt_name, expire_date, purpose, owner,
     if image:
         cobbler_type = 'image'
         ram_required = target_obj['virt_ram']
-        cpus_requierd = target_obj['virt_cpus']
+        cpus_required = target_obj['virt_cpus']
         virt.install(COBBLER_HOST, target_obj['name'], virt_name=virt_name, image=True)
     if system:
         cobbler_type = 'system'
